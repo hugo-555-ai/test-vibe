@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Wars · La Saga Resumida</title>
+<style>
+  :root{
+    --crawl-color:#f6e504;
+    --bg:#000;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);color:#fff;font-family:"News Gothic","Arial Narrow",Arial,sans-serif;overflow:hidden}
+
+  /* ----- Starfield ----- */
+  #stars{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .star{position:absolute;background:#fff;border-radius:50%;opacity:.8}
+
+  /* ----- Intro card ----- */
+  #intro{
+    position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;background:#000;transition:opacity 1s ease;
+  }
+  #intro h1{
+    font-size:clamp(28px,7vw,86px);font-weight:800;letter-spacing:.18em;color:#fff;
+    text-transform:uppercase;line-height:1;margin-bottom:24px;
+    animation:logoPulse 6s ease-in-out infinite;
+  }
+  #intro .tagline{font-size:clamp(14px,2.4vw,22px);color:#999;letter-spacing:.05em;max-width:720px;margin-bottom:36px;line-height:1.5}
+  #startBtn{
+    background:transparent;border:2px solid var(--crawl-color);color:var(--crawl-color);
+    font-size:clamp(14px,2vw,18px);letter-spacing:.2em;text-transform:uppercase;
+    padding:14px 34px;cursor:pointer;border-radius:2px;transition:.25s;font-family:inherit;
+  }
+  #startBtn:hover{background:var(--crawl-color);color:#000}
+  #intro .hint{margin-top:20px;font-size:13px;color:#555;letter-spacing:.1em}
+  @keyframes logoPulse{0%,100%{text-shadow:0 0 18px rgba(246,229,4,.25)}50%{text-shadow:0 0 40px rgba(246,229,4,.55)}}
+
+  /* ----- Crawl stage ----- */
+  #stage{position:fixed;inset:0;z-index:10;display:none;perspective:400px;perspective-origin:50% 100%}
+  #stage.active{display:block}
+
+  .crawl{
+    position:absolute;left:50%;top:100%;width:60%;transform-origin:50% 100%;
+    transform:translateX(-50%) rotateX(28deg);
+    color:var(--crawl-color);text-align:justify;font-weight:600;
+    font-size:clamp(16px,2.6vw,30px);line-height:1.6;letter-spacing:.04em;
+    will-change:top;
+  }
+  .crawl .ep{font-size:.78em;letter-spacing:.32em;text-transform:uppercase;text-align:center;margin-bottom:.4em;opacity:.92}
+  .crawl .title{font-size:1.35em;font-weight:800;text-transform:uppercase;text-align:center;margin-bottom:1.1em;letter-spacing:.12em}
+  .crawl p{margin-bottom:1em}
+  .crawl p:first-letter{font-size:1.05em}
+
+  /* vanishing fade */
+  .crawl::after{
+    content:"";position:absolute;left:0;right:0;top:-60%;height:60%;
+    background:linear-gradient(to bottom,#000,rgba(0,0,0,0));
+    pointer-events:none;
+  }
+
+  /* ----- Controls ----- */
+  #controls{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;
+    padding:14px 22px;background:linear-gradient(to top,rgba(0,0,0,.85),rgba(0,0,0,0));
+    display:flex;align-items:center;gap:16px;font-size:13px;color:#bbb;letter-spacing:.08em;
+  }
+  #controls button{
+    background:transparent;border:1px solid #444;color:#ccc;padding:8px 14px;cursor:pointer;
+    font-family:inherit;font-size:12px;letter-spacing:.15em;text-transform:uppercase;border-radius:2px;transition:.2s;
+  }
+  #controls button:hover{border-color:var(--crawl-color);color:var(--crawl-color)}
+  #progressWrap{flex:1;height:4px;background:#222;border-radius:2px;overflow:hidden;cursor:pointer}
+  #progress{height:100%;width:0;background:var(--crawl-color);transition:width .2s linear}
+  #timeLabel{min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
+  #chapterLabel{min-width:170px;text-transform:uppercase;letter-spacing:.18em;color:var(--crawl-color)}
+  #muteBtn{min-width:44px}
+
+  /* ----- End card ----- */
+  #end{
+    position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;background:#000;padding:24px;
+  }
+  #end h2{font-size:clamp(26px,6vw,72px);font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#fff;margin-bottom:18px}
+  #end p{color:#999;max-width:680px;line-height:1.6;font-size:clamp(14px,2vw,18px);margin-bottom:30px}
+  #end button{
+    background:transparent;border:2px solid var(--crawl-color);color:var(--crawl-color);
+    padding:12px 30px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;font-family:inherit;border-radius:2px;
+  }
+  #end button:hover{background:var(--crawl-color);color:#000}
+
+  @media (max-width:720px){
+    .crawl{width:84%;font-size:clamp(15px,5vw,22px)}
+    #controls{flex-wrap:wrap;gap:10px}
+    #chapterLabel,#timeLabel{min-width:0;flex:1 1 100%;order:-1;text-align:center}
+  }
+</style>
+</head>
+<body>
+  <div id="stars"></div>
+
+  <div id="intro">
+    <h1>Star Wars</h1>
+    <div class="tagline">La saga completa resumida en el estilo de su legendaria introducción.<br>Una experiencia de unos 10 minutos.</div>
+    <button id="startBtn">Iniciar el vuelo</button>
+    <div class="hint">Consejo: usa auriculares y a oscuras para la mejor experiencia.</div>
+  </div>
+
+  <div id="stage">
+    <div class="crawl" id="crawl">
+      <div class="ep"></div>
+      <div class="title"></div>
+      <div class="body"></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button id="prevBtn">◀ Cap.</button>
+    <button id="playBtn">⏸ Pausa</button>
+    <button id="nextBtn">Sig. ▶</button>
+    <div id="progressWrap"><div id="progress"></div></div>
+    <span id="chapterLabel"></span>
+    <span id="timeLabel">00:00 / 10:00</span>
+    <button id="muteBtn">🔇</button>
+    <button id="restartBtn">↺</button>
+  </div>
+
+  <div id="end">
+    <h2>Que la Fuerza te acompañe</h2>
+    <p>Has recorrido la saga de los Skywalker: la caída de la República, el ascenso y la redención del Imperio, y el regreso del equilibrio a la galaxia.</p>
+    <button id="restartEndBtn">Ver de nuevo</button>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Chapters ----------
+  // Each chapter is an opening-crawl style block. Total reading ~10 minutes.
+  var chapters = [
+    {ep:"Episodio I", title:"La Amenaza Fantasma", body:[
+      "La República Galáctica vive en paz, pero bajo su superficie crece la sombra. El Senado se corrompe, la burocracia ahoga a los mundos lejanos y la Federación de Comercio bloquea Naboo por orden de un sith oculto.",
+      "Una reina adolescente, Padmé Amidala, resiste. Dos jedi, Qui-Gon Jinn y su aprendiz Obi-Wan Kenobi, la protegen. En Tatooine encuentran a Anakin Skywalker, un niño esclavo sin padre, fuerte en la Fuerza como ningún otro.",
+      "Los sith, que se creían extintos durante un milenio, reaparecen. El maestro Darth Sidious mueve las piezas desde la sombra; su aprendiz, Darth Maul, cae ante Obi-Wan. Anakin es liberado y llevado al Templo Jedi, que aún ignora el peligro.",
+      "El equilibrio de la Fuerza está por romperse."
+    ]},
+    {ep:"Episodio II", title:"El Ataque de los Clones", body:[
+      "Diez años después, la galaxia se desmordea. Un ejército separatista, la Confederación, amenaza con la guerra civil. Tras un atentado contra la ahora senadora Padmé, el jedi Obi-Wan descubre un ejército clon creado en secreto para la República.",
+      "Anakin, ya un joven impetuoso, protege a Padmé y se enamora de ella en contra de las reglas de la Orden. Sus sueños con su madre lo arrastran a Tatooine, donde su rabia ante su muerte lo acerca al lado oscuro.",
+      "En Geonosis estalla la primera batalla de las Guerras Clon. El maestro Yoda lidera a los clones; cientos de jedi caen. Anakin y Padmé se casan en secreto. La guerra ha comenzado, y con ella el plan de Sidious se acelera."
+    ]},
+    {ep:"Episodio III", title:"La Venganza de los Sith", body:[
+      "La guerra consume la galaxia. Anakin, héroe de la República, es consumido por visiones de la muerte de Padmé, embarazada. El canciller Palpatine se revela como Darth Sidious y le ofrece el poder para salvarla: el lado oscuro.",
+      "Traicionando a los jedi, Anakin se convierte en Darth Vader. La Orden 66 se ejecuta: los clones masacran a sus generales jedi por toda la galaxia. El Templo arde. Yoda y Obi-Wan sobreviven como últimos.",
+      "En Mustafar, Obi-Wan derrota a Vader, que queda quemado y mutilado. Padmé muere al dar a luz a dos gemelos: Luke y Leia, ocultos en Tatooine y Alderaan. Vader es encerrado en su armadura negra. El Imperio ha nacido. La esperanza, apenas un susurro."
+    ]},
+    {ep:"Episodio IV", title:"Una Nueva Esperanza", body:[
+      "Diecinueve años después, el Imperio domina con miedo y una estación de batalla capaz de destruir planetas: la Estrella de la Muerte. La princesa Leia, líder rebelde, roba los planos de esa arma y los esconde en un droide, R2-D2.",
+      "En Tatooine, el granjero Luke Skywalker halla el mensaje y al viejo Obi-Wan, que le revela su herencia jedi. Junto al contrabandista Han Solo y Chewbacca, rescatan a Leia. El mentor Obi-Wan se sacrifica ante su antiguo alumno, Vader.",
+      "La Alianza Rebelde ataca la Estrella de la Muerte. Con un único disparo en su punto débil, Luke confía en la Fuerza y la hace estallar. Es la primera gran victoria. La esperanza, hasta entonces un susurro, ahora arde."
+    ]},
+    {ep:"Episodio V", title:"El Imperio Contraataca", body:[
+      "El Imperio contraataca sin tregua. En el helado Hoth, la base rebelde cae. Han huye con Leia y Chewbacca en el Halcón Milenario, perseguido por el cazador Boba Fett. En Cloud City, Vader tiende una trampa.",
+      "Luke, entrenado por Yoda en Dagobah, acude a salvar a sus amigos antes de estar listo. En el duelo con Vader, pierde una mano y oye la verdad que lo destruye: Vader es su padre, Anakin Skywalker.",
+      "Han es congelado en carbonita y entregado a Jabba. La rebelión está herida, Luke mutilado, la verdad revelada. Pero el lado luminoso no se rinde: la Fuerza fluye aún, y con ella, la voluntad de rescatar lo perdido."
+    ]},
+    {ep:"Episodio VI", title:"El Retorno del Jedi", body:[
+      "Un año después, Luke rescata a Han de Jabba en Tatooine. La Alianza planea el asalto final: destruir una segunda Estrella de la Muerte y, con el Emperador a bordo, acabar con el Imperio.",
+      " Luke, ya caballero jedi, elige no matar a Vader, sino redimirlo. En el trono del Emperador, rechaza el lado oscuro. Palpatine lo tortura con rayos, pero Vader, viendo morir a su hijo, vuelve al luminoso y lanza a Sidious al abismo.",
+      "Anakin Skywalker muere en paz. La segunda Estrella estalla. Por toda la galaxia, los pueblos celebran el fin de la tiranía. El equilibrio de la Fuerza, profetizado tiempo atrás, parece alcanzado. Pero la paz, como siempre, sería breve."
+    ]},
+    {ep:"Episodio VII", title:"El Despertar de la Fuerza", body:[
+      "Treinta años después, la Nueva República ignora el peligro. De las cenizas del Imperio surge la Primera Orden, y con ella un nuevo sith: Kylo Ren, hijo de Han y Leia, seducido por el lado oscuro y obsesionado con su abuelo, Vader.",
+      " En el desierto de Jakku, la buscatesoros Rey halla a BB-8 y el mapa hacia el jedi desaparecido, Luke. Junto a Finn, un soldado desertor, y Han Solo, vuelan hacia la base estrella-killer, capaz de devorar sistemas enteros.",
+      "Han muere a manos de su propio hijo. La base estrella-killer estalla por el ataque de la Resistencia. Rey, sintiendo la Fuerza, derrota a Kylo. El mapa conduce a un planeta escondido: Luke Skywalker, exiliado, aguarda el regreso de un último destello."
+    ]},
+    {ep:"Episodio VIII", title:"Los Últimos Jedi", body:[
+      "El último destello se apaga. Luke, roto por el fracaso con Kylo Ren, se niega a entrenar a Rey. La Resistencia, diezmada, huye por el hiperespacio mientras la Primera Orden los acorrala.",
+      "En un acto de sacrificio, la almirante Holdo embiste a la flota enemiga a la velocidad de la luz, partiendo su nave en pedazos. En el sal mineral Crait, Luke reaparece: no en persona, sino como proyección a través de la Fuerza, para salvar a los suyos una última vez.",
+      "Agotado, Luke se funde con la Fuerza y desaparece. Pero la llama no muere: en los rincones más pobres de la galaxia, niños esclavos ya juegan con la Fuerza, soñando con los jedi. Rey toma el sable de Luke. La chispa se vuelve incendio."
+    ]},
+    {ep:"Episodio IX", title:"El Ascenso de Skywalker", body:[
+      "De las sombras regresa el emperador Palpatine, resucitado en secreto, con una flota inmensa y el poder de todos los sith antes que él. Su meta: gobernar la galaxia para siempre como el último sith.",
+      "Rey descubre su origen: nieta de Palpatine. Aun así, elige la luz. Kylo Ren, tras la muerte de su madre Leia, abandona el lado oscuro y vuelve como Ben Solo para ayudarla.",
+      "En Exegol, Rey se enfrenta al emperador. Las voces de todos los jedi del pasado fluyen hacia ella y, con sus propios sables, destruye a Sidious para siempre. Ben muere salvándola. La galaxia celebra el triunfo de Skywalker. Rey adopta el apellido en Tatooine, mirando los soles gemelos. El equilibrio, al fin, se restaura."
+    ]}
+  ];
+
+  // ---------- Starfield ----------
+  var starsEl = document.getElementById('stars');
+  (function makeStars(){
+    var n = 220;
+    var frag = document.createDocumentFragment();
+    for(var i=0;i<n;i++){
+      var s = document.createElement('div');
+      s.className='star';
+      var size = Math.random()*2+0.4;
+      s.style.width=size+'px';s.style.height=size+'px';
+      s.style.left=(Math.random()*100)+'%';
+      s.style.top=(Math.random()*100)+'%';
+      s.style.opacity=(Math.random()*0.7+0.2).toFixed(2);
+      s.style.animation='twinkle '+(Math.random()*3+2).toFixed(2)+'s infinite alternate';
+      frag.appendChild(s);
+    }
+    starsEl.appendChild(frag);
+    var style=document.createElement('style');
+    style.textContent='@keyframes twinkle{from{opacity:.2}to{opacity:1}}';
+    document.head.appendChild(style);
+  })();
+
+  // ---------- Timing ----------
+  // Aim ~10 minutes total (~600s). Distribute per chapter by word count, plus per-chapter pause.
+  var READ_WPM = 150; // words per minute
+  var PAUSE_MS = 1800; // pause between chapters
+  function wordCount(ch){ var w=0; ch.body.forEach(function(p){w+=p.split(/\s+/).length}); ch.ep.split(/\s+/).forEach(function(){w++}); ch.title.split(/\s+/).forEach(function(){w++}); return w; }
+  var totalWords = chapters.reduce(function(a,ch){return a+wordCount(ch)},0);
+  var targetMs = 600*1000;
+  var perWordMs = (targetMs - PAUSE_MS*chapters.length) / totalWords;
+  chapters.forEach(function(ch){ ch.durMs = Math.max(22000, Math.round(wordCount(ch)*perWordMs)); });
+
+  // ---------- State ----------
+  var intro=document.getElementById('intro');
+  var stage=document.getElementById('stage');
+  var crawl=document.getElementById('crawl');
+  var crawlEp=crawl.querySelector('.ep');
+  var crawlTitle=crawl.querySelector('.title');
+  var crawlBody=crawl.querySelector('.body');
+  var controls=document.getElementById('controls');
+  var playBtn=document.getElementById('playBtn');
+  var prevBtn=document.getElementById('prevBtn');
+  var nextBtn=document.getElementById('nextBtn');
+  var restartBtn=document.getElementById('restartBtn');
+  var muteBtn=document.getElementById('muteBtn');
+  var progressWrap=document.getElementById('progressWrap');
+  var progress=document.getElementById('progress');
+  var chapterLabel=document.getElementById('chapterLabel');
+  var timeLabel=document.getElementById('timeLabel');
+  var endCard=document.getElementById('end');
+  var restartEndBtn=document.getElementById('restartEndBtn');
+  var startBtn=document.getElementById('startBtn');
+
+  var ci=0;          // current chapter index
+  var playing=false;
+  var chStart=0;     // timestamp when current chapter started (within its run)
+  var chElapsed=0;   // elapsed ms in current chapter
+  var globalElapsed=0; // ms across all chapters (for global progress)
+  var globalTotal=chapters.reduce(function(a,ch){return a+ch.durMs},0)+PAUSE_MS*chapters.length;
+  var rafId=null;
+  var lastTs=0;
+
+  // ---------- Audio (subtle ambient hum via Web Audio, toggleable) ----------
+  var audioCtx=null, hum=null, humGain=null, audioOn=false;
+  function startAudio(){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended') audioCtx.resume();
+      if(hum) return;
+      hum=audioCtx.createOscillator();
+      humGain=audioCtx.createGain();
+      var lfo=audioCtx.createOscillator();
+      var lfoGain=audioCtx.createGain();
+      hum.type='sawtooth'; hum.frequency.value=55;
+      lfo.frequency.value=0.15; lfoGain.gain.value=8;
+      lfo.connect(lfoGain).connect(hum.frequency);
+      humGain.gain.value=0.0001;
+      hum.connect(humGain).connect(audioCtx.destination);
+      hum.start(); lfo.start();
+      humGain.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime+2);
+      audioOn=true; muteBtn.textContent='🔊';
+    }catch(e){ audioOn=false; }
+  }
+  function stopAudio(){
+    if(humGain){ try{humGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime+0.5);}catch(e){} }
+  }
+
+  // ---------- Crawl animation ----------
+  function loadChapter(i){
+    ci=i;
+    var ch=chapters[i];
+    crawlEp.textContent=ch.ep;
+    crawlTitle.textContent=ch.title;
+    crawlBody.innerHTML = ch.body.map(function(p){return '<p>'+p+'</p>';}).join('');
+    chapterLabel.textContent = ch.ep+' · '+ch.title;
+    // reset position
+    crawl.style.top='100%';
+    chElapsed=0;
+    updateProgress();
+    updateTime();
+  }
+
+  function frame(ts){
+    if(!playing) return;
+    if(!lastTs) lastTs=ts;
+    var dt=ts-lastTs; lastTs=ts;
+    chElapsed+=dt; globalElapsed+=dt;
+
+    var ch=chapters[ci];
+    var t=chElapsed/ch.durMs;
+    // scroll from top:100% to top:-160% (off above the vanish point)
+    var from=100, to=-170;
+    var top=from+(to-from)*easeOutCubic(t);
+    crawl.style.top=top+'%';
+
+    updateProgress();
+    updateTime();
+
+    if(t>=1){
+      // advance
+      if(ci<chapters.length-1){
+        playing=false;
+        crawl.style.opacity='0';
+        setTimeout(function(){
+          crawl.style.opacity='1';
+          loadChapter(ci+1);
+          lastTs=0;
+          playing=true;
+          rafId=requestAnimationFrame(frame);
+        }, PAUSE_MS);
+        return;
+      } else {
+        finish();
+        return;
+      }
+    }
+    rafId=requestAnimationFrame(frame);
+  }
+
+  function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+
+  function updateProgress(){
+    var pct=Math.min(100,globalElapsed/globalTotal*100);
+    progress.style.width=pct+'%';
+  }
+  function fmt(ms){ var s=Math.round(ms/1000); var m=Math.floor(s/60); var ss=s%60; return pad(m)+':'+pad(ss); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function updateTime(){
+    timeLabel.textContent = fmt(globalElapsed)+' / '+fmt(globalTotal);
+  }
+
+  // ---------- Controls ----------
+  function play(){ if(playing) return; playing=true; lastTs=0; rafId=requestAnimationFrame(frame); playBtn.textContent='⏸ Pausa'; }
+  function pause(){ if(!playing) return; playing=false; if(rafId) cancelAnimationFrame(rafId); playBtn.textContent='▶ Continuar'; }
+  function togglePlay(){ playing?pause():play(); }
+  function next(){ if(ci<chapters.length-1){ pause(); loadChapter(ci+1); if(playing) play(); else updateProgress(); } }
+  function prev(){ if(ci>0){ pause(); loadChapter(ci-1); if(playing) play(); else updateProgress(); } }
+  function restart(){
+    pause();
+    ci=0; globalElapsed=0; chElapsed=0;
+    crawl.style.opacity='1';
+    loadChapter(0);
+    endCard.style.display='none';
+    controls.style.display='flex';
+    stage.classList.add('active');
+    play();
+  }
+  function finish(){
+    pause();
+    stage.classList.remove('active');
+    controls.style.display='none';
+    endCard.style.display='flex';
+    stopAudio();
+  }
+
+  playBtn.addEventListener('click',togglePlay);
+  nextBtn.addEventListener('click',next);
+  prevBtn.addEventListener('click',prev);
+  restartBtn.addEventListener('click',restart);
+  muteBtn.addEventListener('click',function(){ if(audioOn){stopAudio();audioOn=false;muteBtn.textContent='🔇';} else {startAudio();} });
+  restartEndBtn.addEventListener('click',restart);
+
+  progressWrap.addEventListener('click',function(e){
+    var rect=progressWrap.getBoundingClientRect();
+    var ratio=(e.clientX-rect.left)/rect.width;
+    var targetMs=Math.max(0,Math.min(1,ratio))*globalTotal;
+    // find chapter for target
+    var acc=0; var foundI=0; var inside=0;
+    for(var i=0;i<chapters.length;i++){
+      var seg=chapters[i].durMs+PAUSE_MS;
+      if(acc+seg>=targetMs){ foundI=i; inside=targetMs-acc; break; }
+      acc+=seg;
+    }
+    globalElapsed=targetMs;
+    if(foundI!==ci){ ci=foundI; loadChapter(foundI); }
+    chElapsed=Math.max(0,Math.min(chapters[ci].durMs,inside));
+    // re-position crawl
+    var t=chElapsed/chapters[ci].durMs;
+    crawl.style.top=(100+( -170-100)*easeOutCubic(t))+'%';
+    updateProgress(); updateTime();
+  });
+
+  // keyboard
+  document.addEventListener('keydown',function(e){
+    if(stage.classList.contains('active')||endCard.style.display==='flex'){
+      if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+      if(e.code==='ArrowRight'){ next(); }
+      if(e.code==='ArrowLeft'){ prev(); }
+      if(e.code==='KeyR'){ restart(); }
+    }
+  });
+
+  // ---------- Start ----------
+  startBtn.addEventListener('click',function(){
+    intro.style.opacity='0';
+    setTimeout(function(){ intro.style.display='none'; }, 1000);
+    stage.classList.add('active');
+    controls.style.display='flex';
+    loadChapter(0);
+    play();
+    startAudio();
+  });
+
+  // expose for debugging
+  window.__crawl={chapters:chapters,restart:restart};
+})();
+</script>
+</body>
+</html>
