@@ -610,6 +610,29 @@
 
         .prop-item { position: relative; }
 
+        .prop-item.editing {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(255, 230, 109, 0.45), 0 0 14px rgba(255, 230, 109, 0.35);
+        }
+
+        .prop-remove {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            font-size: 10px;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.15s;
+        }
+
+        .prop-remove:hover { background: var(--primary); transform: scale(1.15); }
+
         .prop-count {
             position: absolute;
             top: 4px;
@@ -859,6 +882,7 @@ var nextUid = 1;
 var selectedUid = null;   // accessory targeted by drag / wheel / slider
 var effects = [];         // active decoration ids (they can be combined)
 var finishLayers = [];    // active Acabado-2 layers (stackable)
+var editSel = { effect: null, finish2: null };   // which active option of a stackable category is being edited
 var finishSettings = { dot: 1 };   // halftone dot size multiplier
 var effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1, sound: true };   // shared by every active decoration
 var effectClock = 0;      // ms of decoration time, advanced by speed so changing it never makes things jump
@@ -2986,7 +3010,8 @@ function updateFinishControls() {
     var ids = [];
     if (currentPropTab === 'finish' && selectedProps.finish !== 'none') ids = [selectedProps.finish];
     else if (currentPropTab === 'finish2') {
-        ids = getCategory('finish2').items.map(function(x) { return x.id; }).filter(function(id) { return finishLayers.indexOf(id) >= 0; });
+        var et = editTarget('finish2');                 // only the selected layer's settings
+        ids = et ? [et] : [];
     }
     box.style.display = ids.length ? 'block' : 'none';
     var sig = ids.join(',');
@@ -3423,14 +3448,21 @@ function loadProps() {
         }
         var isNone = prop.id === 'none';
         var label = (multi && isNone) ? 'Quitar todos' : prop.name;
+        var accessory = (cat.key === 'hat' || cat.key === 'glasses');
+        var removable = on && !isNone && !accessory;                  // these get a ✕; accessories are removed from their list
+        var editing = removable && (cat.key === 'effect' || cat.key === 'finish2') && editTarget(cat.key) === prop.id;
         var item = document.createElement('button');
         item.type = 'button';
-        item.className = 'prop-item' + (on && !isNone ? ' selected' : '') + (isNone && !multi && on ? ' selected' : '');
-        item.title = multi && !isNone ? (cat.key === 'effect' || cat.key === 'finish2' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)')
-            : (!multi && !isNone ? 'Pulsa de nuevo para quitarlo' : label);
+        item.className = 'prop-item' + (on && !isNone ? ' selected' : '') + (isNone && !multi && on ? ' selected' : '') + (editing ? ' editing' : '');
+        item.title = accessory && !isNone ? 'Pulsa para añadir (puedes poner varios)'
+            : (removable ? 'Pulsa para editar sus ajustes · ✕ para quitarlo'
+            : (isNone ? label : 'Pulsa para activar'));
         item.innerHTML = '<span class="prop-emoji">' + prop.emoji + '</span><span class="prop-name">' + label + '</span>' +
-            (count > 0 ? '<span class="prop-count">×' + count + '</span>' : '');
+            (count > 0 ? '<span class="prop-count">×' + count + '</span>' : '') +
+            (removable ? '<span class="prop-remove" role="button" title="Quitar">✕</span>' : '');
         item.onclick = function() { selectProp(prop.id, cat.key); };
+        var rm = item.querySelector('.prop-remove');
+        if (rm) rm.onclick = function(ev) { ev.stopPropagation(); removeProp(prop.id, cat.key); };
         grid.appendChild(item);
     });
 }
@@ -3440,24 +3472,49 @@ function selectProp(propId, category) {
         if (propId === 'none') clearAccessories(category); else addAccessory(category, propId);
         return;
     }
+    // Pressing a card activates it (if needed) and selects it for editing; only its ✕ (or "Ninguno") switches it off.
     if (category === 'effect') {
-        if (propId === 'none') { effects = []; loadProps(); updateSummary(); } else toggleEffect(propId);
+        if (propId === 'none') { effects = []; editSel.effect = null; }
+        else { if (effects.indexOf(propId) < 0) effects.push(propId); editSel.effect = propId; }
+        loadProps(); updateSummary();
         return;
     }
     if (category === 'finish2') {
-        if (propId === 'none') finishLayers = [];
-        else { var li = finishLayers.indexOf(propId); if (li >= 0) finishLayers.splice(li, 1); else finishLayers.push(propId); }
+        if (propId === 'none') { finishLayers = []; editSel.finish2 = null; }
+        else { if (finishLayers.indexOf(propId) < 0) finishLayers.push(propId); editSel.finish2 = propId; }
         loadProps(); updateSummary(); updateFinishControls();
         return;
     }
-    // single-choice categories: pressing the active option again switches it off, like the decorations
-    if (propId !== 'none' && selectedProps[category] === propId) propId = 'none';
-    if (category === 'background' && propId === 'wishi') resetWishi();     // always start dirty
+    if (category === 'background' && propId === 'wishi' && selectedProps.background !== 'wishi') resetWishi();     // starts dirty
     selectedProps[category] = propId;
     loadProps();
     updateSummary();
     updateDistortControls();
     updateWishiControls();
+}
+
+// The option of a stackable category (decoration, Acabado-2) whose settings are being edited.
+function editTarget(key) {
+    var list = key === 'effect' ? effects : finishLayers;
+    if (editSel[key] && list.indexOf(editSel[key]) >= 0) return editSel[key];
+    return list.length ? list[list.length - 1] : null;
+}
+
+// The small ✕ on a card: switch that one option off.
+function removeProp(propId, category) {
+    if (category === 'effect') {
+        var i = effects.indexOf(propId);
+        if (i >= 0) effects.splice(i, 1);
+        if (editSel.effect === propId) editSel.effect = null;
+        loadProps(); updateSummary();
+    } else if (category === 'finish2') {
+        var j = finishLayers.indexOf(propId);
+        if (j >= 0) finishLayers.splice(j, 1);
+        if (editSel.finish2 === propId) editSel.finish2 = null;
+        loadProps(); updateSummary(); updateFinishControls();
+    } else if (selectedProps[category] === propId) {
+        selectProp('none', category);                 // same side effects as choosing "Ninguno"
+    }
 }
 
 // Clears every image look (Filtros, Distorsión, Acabado-1, Acabado-2) and puts all their settings back to defaults.
@@ -3467,6 +3524,7 @@ function resetFilters() {
     selectedProps.distort = 'none';
     selectedProps.finish = 'none';
     finishLayers = [];
+    editSel.finish2 = null;
     finishParams = {};
     finishSettings.dot = 1;
     distortCenter.x = 0.5;
