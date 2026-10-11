@@ -366,40 +366,7 @@
         }
 
         /* Confetti Effect */
-        .confetti-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 999;
-            display: none;
-        }
 
-        .confetti-container.active {
-            display: block;
-        }
-
-        .confetti {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            opacity: 0;
-        }
-
-        @keyframes confettiRise {
-            0% {
-                opacity: 1;
-                transform: translateY(100vh) rotate(0deg);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(100px) rotate(720deg);
-            }
-        }
 
         /* Error Modal */
         .modal-overlay {
@@ -514,8 +481,6 @@
     </style>
 </head>
 <body>
-    <div class="confetti-container" id="confettiContainer"></div>
-
     <div class="modal-overlay" id="errorModal">
         <div class="modal">
             <h3>Error de Camara</h3>
@@ -806,23 +771,7 @@ function playBeepSound() {
 }
 
 // ===== Confetti Effect =====
-function triggerConfetti() {
-    var container = document.getElementById('confettiContainer');
-    container.classList.add('active');
-    for (var i = 0; i < 100; i++) {
-        var confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.bottom = '0';
-        confetti.style.background = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ffffff'][Math.floor(Math.random() * 4)];
-        confetti.style.animation = 'confettiRise 3s linear forwards';
-        container.appendChild(confetti);
-    }
-    setTimeout(function() {
-        container.innerHTML = '';
-        container.classList.remove('active');
-    }, 3000);
-}
+
 
 // ===== Fun Emoji Display =====
 const funEmojis = ['\ud83d\ude00', '\ud83d\ude02', '\ud83d\ude06', '\ud83d\ude0a', '\ud83d\ude0d', '\ud83d\ude18', '\ud83d\ude1a', '\ud83d\ude1c', '\ud83d\ude03', '\ud83d\ude2d', '\ud83d\ude01', '\ud83d\ude05', '\ud83d\ude0b', '\ud83d\ude0e', '\ud83d\ude10', '\ud83d\ude12', '\ud83d\udc4c', '\ud83d\udc4f', '\u270c', '\ud83d\udc8b'];
@@ -1259,7 +1208,6 @@ async function capturePhoto() {
             var photoUrl = URL.createObjectURL(blob);
             photos.push(photoUrl); 
             updatePhotoStrip(); 
-            triggerConfetti(); 
             resolve();
         }, 'image/jpeg', 0.92);
     });
