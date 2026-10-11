@@ -407,6 +407,44 @@
             text-align: center;
         }
 
+        .accessory-controls {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--panel-border);
+        }
+
+        .accessory-controls label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .accessory-controls input[type=range] {
+            width: 100%;
+            accent-color: var(--secondary);
+        }
+
+        .accessory-controls .btn.small {
+            width: 100%;
+            margin-top: 6px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            letter-spacing: 0.5px;
+            text-transform: none;
+            box-shadow: none;
+        }
+
+        .accessory-controls .hint {
+            margin-top: 8px;
+            font-size: 0.72em;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
         .props-summary {
             margin-top: 10px;
             padding-top: 8px;
@@ -533,6 +571,12 @@
         <h2>Accesorios</h2>
         <div class="props-tabs" id="propsTabs"></div>
         <div class="props-grid" id="propsGrid"></div>
+        <div class="accessory-controls" id="accessoryControls" style="display:none;">
+            <label for="sizeSlider"><span id="sizeLabel">Tamaño</span> <span id="sizeValue">100%</span></label>
+            <input type="range" id="sizeSlider" min="0.4" max="2.5" step="0.05" value="1" oninput="onSizeSlider(this.value)">
+            <button class="btn secondary small" type="button" onclick="resetAccessory()">↺ Restablecer</button>
+            <p class="hint">Arrastra el accesorio sobre la cámara para moverlo. Rueda del ratón o pellizco para cambiar el tamaño.</p>
+        </div>
         <div class="props-summary" id="propsSummary"></div>
     </div>
 
@@ -559,7 +603,13 @@ var currentPhotoIndex = 0;
 var isSessionRunning = false;
 var sessionTimers = [];
 var currentPropTab = 'filter';
-var selectedProps = { filter: 'none', hat: 'none', glasses: 'none', background: 'none', effect: 'none' };
+var selectedProps = { filter: 'none', distort: 'none', hat: 'none', glasses: 'none', background: 'none', effect: 'none' };
+// Hat/glasses placement relative to the face: dx/dy in face-widths, scale multiplier.
+var accessoryTransform = { hat: { dx: 0, dy: 0, scale: 1 }, glasses: { dx: 0, dy: 0, scale: 1 } };
+var activeAccessory = null;   // 'hat' | 'glasses': target of wheel/slider
+var dragState = null;
+var activePointers = {};
+var renderHQ = false;         // full-resolution distortion while capturing
 var faceBox = null;           // detected face (canvas coordinates) or null -> heuristic
 var faceMisses = 0;
 var faceDetector = null;
@@ -577,6 +627,17 @@ var propCategories = [
         { id: 'cool', name: 'Frío', emoji: '❄️' },
         { id: 'blur', name: 'Suave', emoji: '💫' },
         { id: 'halloween', name: 'Halloween', emoji: '🎃' }
+    ]},
+    { key: 'distort', label: 'Distorsión', icon: '🌀', items: [
+        { id: 'none', name: 'Ninguna', emoji: '🚫' },
+        { id: 'bulge', name: 'Ojo de pez', emoji: '🐟' },
+        { id: 'pinch', name: 'Pellizco', emoji: '🤏' },
+        { id: 'swirl', name: 'Torbellino', emoji: '🌀' },
+        { id: 'wave', name: 'Ondas', emoji: '🌊' },
+        { id: 'mirror', name: 'Espejo', emoji: '🪞' },
+        { id: 'wide', name: 'Feria ancha', emoji: '↔️' },
+        { id: 'tall', name: 'Alargado', emoji: '↕️' },
+        { id: 'pixelate', name: 'Pixelado', emoji: '🔲' }
     ]},
     { key: 'hat', label: 'Sombreros', icon: '🎩', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -660,6 +721,8 @@ document.addEventListener('DOMContentLoaded', function() {
     renderTabs();
     loadProps();
     updateSummary();
+    updateAccessoryControls();
+    setupAccessoryInteraction();
     initializeCamera();
     requestAnimationFrame(renderLoop);
 });
@@ -749,16 +812,16 @@ function renderLoop(now) {
             previewCanvas.height = cameraView.videoHeight;
         }
         if (now - lastFaceCheck > 200) { lastFaceCheck = now; detectFace(); }
-        renderFrame(previewCtx, previewCanvas.width, previewCanvas.height, now);
+        renderFrame(previewCtx, previewCanvas.width, previewCanvas.height, now, true);
     }
     requestAnimationFrame(renderLoop);
 }
 
-function renderFrame(ctx, w, h, t) {
+function renderFrame(ctx, w, h, t, guides) {
     var bg = selectedProps.background;
     var hasBg = bg && bg !== 'none';
 
-    drawVideoLayer(w, h);
+    drawVideoLayer(w, h, t);
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
@@ -785,6 +848,148 @@ function renderFrame(ctx, w, h, t) {
     if (selectedProps.hat !== 'none') drawHat(ctx, face, selectedProps.hat);
     if (selectedProps.glasses !== 'none') drawGlasses(ctx, face, selectedProps.glasses);
     if (selectedProps.effect !== 'none') drawEffect(ctx, w, h, selectedProps.effect, t);
+    if (guides) drawGuides(ctx, face);
+}
+
+// ===== Move / resize hats & glasses =====
+function getAccessoryBox(cat, f) {
+    var tr = accessoryTransform[cat], u = f.w, s = tr.scale;
+    if (cat === 'hat') {
+        var y0 = f.top + f.h * 0.12 + tr.dy * u;
+        var cx = f.cx + tr.dx * u;
+        return { x0: cx - 0.62 * u * s, x1: cx + 0.62 * u * s, y0: y0 - 0.8 * u * s, y1: y0 + 0.12 * u * s };
+    }
+    var ey = f.eyeY + tr.dy * u;
+    var gx = f.cx + tr.dx * u;
+    return { x0: gx - 0.62 * u * s, x1: gx + 0.62 * u * s, y0: ey - 0.27 * u * s, y1: ey + 0.27 * u * s };
+}
+
+function drawGuides(ctx, f) {
+    ['hat', 'glasses'].forEach(function(cat) {
+        if (selectedProps[cat] === 'none') return;
+        if (cat !== currentPropTab && !(dragState && dragState.cat === cat)) return;
+        var b = getAccessoryBox(cat, f);
+        ctx.save();
+        ctx.setLineDash([10, 8]);
+        ctx.lineWidth = Math.max(2, previewCanvas.width * 0.003);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ffe66d';
+        var hs = Math.max(8, previewCanvas.width * 0.01);
+        ctx.fillRect(b.x1 - hs / 2, b.y1 - hs / 2, hs, hs);
+        ctx.restore();
+    });
+}
+
+function canvasPoint(ev) {
+    var rect = previewCanvas.getBoundingClientRect();
+    var cw = previewCanvas.width, ch = previewCanvas.height;
+    var scale = Math.max(rect.width / cw, rect.height / ch);      // object-fit: cover
+    var offX = (rect.width - cw * scale) / 2, offY = (rect.height - ch * scale) / 2;
+    return { x: (ev.clientX - rect.left - offX) / scale, y: (ev.clientY - rect.top - offY) / scale };
+}
+
+function pickAccessory(p) {
+    var f = getFace(previewCanvas.width, previewCanvas.height);
+    var best = null, bestDist = Infinity;
+    ['glasses', 'hat'].forEach(function(cat) {      // glasses first: they sit on top of the hat
+        if (selectedProps[cat] === 'none') return;
+        var b = getAccessoryBox(cat, f);
+        if (p.x < b.x0 || p.x > b.x1 || p.y < b.y0 || p.y > b.y1) return;
+        var d = Math.abs(p.x - (b.x0 + b.x1) / 2) + Math.abs(p.y - (b.y0 + b.y1) / 2);
+        if (d < bestDist) { bestDist = d; best = cat; }
+    });
+    return best;
+}
+
+function setAccessoryScale(cat, s) {
+    accessoryTransform[cat].scale = Math.max(0.4, Math.min(2.5, s));
+    updateAccessoryControls();
+}
+
+function setupAccessoryInteraction() {
+    var c = previewCanvas;
+    c.style.touchAction = 'none';
+
+    c.addEventListener('pointerdown', function(ev) {
+        activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        var ids = Object.keys(activePointers);
+        if (ids.length === 2 && activeAccessory) {            // pinch to resize
+            var a = activePointers[ids[0]], b = activePointers[ids[1]];
+            dragState = { cat: activeAccessory, pinch: true, startDist: Math.hypot(a.x - b.x, a.y - b.y), startScale: accessoryTransform[activeAccessory].scale };
+            return;
+        }
+        var cat = pickAccessory(canvasPoint(ev));
+        if (!cat) return;
+        activeAccessory = cat;
+        var p = canvasPoint(ev), f = getFace(c.width, c.height), tr = accessoryTransform[cat];
+        dragState = { cat: cat, startX: p.x, startY: p.y, startDx: tr.dx, startDy: tr.dy, u: f.w };
+        c.setPointerCapture(ev.pointerId);
+        c.style.cursor = 'grabbing';
+        if (currentPropTab !== cat) switchPropTab(cat);
+        ev.preventDefault();
+    });
+
+    c.addEventListener('pointermove', function(ev) {
+        if (activePointers[ev.pointerId]) activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        if (dragState && dragState.pinch) {
+            var ids = Object.keys(activePointers);
+            if (ids.length >= 2) {
+                var a = activePointers[ids[0]], b = activePointers[ids[1]];
+                setAccessoryScale(dragState.cat, dragState.startScale * Math.hypot(a.x - b.x, a.y - b.y) / dragState.startDist);
+            }
+            return;
+        }
+        if (dragState) {
+            var p = canvasPoint(ev), tr = accessoryTransform[dragState.cat];
+            tr.dx = dragState.startDx + (p.x - dragState.startX) / dragState.u;
+            tr.dy = dragState.startDy + (p.y - dragState.startY) / dragState.u;
+        } else if (ev.pointerType === 'mouse') {
+            c.style.cursor = pickAccessory(canvasPoint(ev)) ? 'grab' : 'default';
+        }
+    });
+
+    function endPointer(ev) {
+        delete activePointers[ev.pointerId];
+        if (dragState && (!dragState.pinch || Object.keys(activePointers).length < 2)) dragState = null;
+        c.style.cursor = 'default';
+    }
+    c.addEventListener('pointerup', endPointer);
+    c.addEventListener('pointercancel', endPointer);
+
+    c.addEventListener('wheel', function(ev) {
+        var cat = pickAccessory(canvasPoint(ev)) || (activeAccessory && selectedProps[activeAccessory] !== 'none' ? activeAccessory : null);
+        if (!cat) return;
+        ev.preventDefault();
+        activeAccessory = cat;
+        setAccessoryScale(cat, accessoryTransform[cat].scale * Math.exp(-ev.deltaY * 0.0015));
+    }, { passive: false });
+}
+
+function updateAccessoryControls() {
+    var box = document.getElementById('accessoryControls');
+    var cat = currentPropTab;
+    var show = (cat === 'hat' || cat === 'glasses');
+    box.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    document.getElementById('sizeLabel').textContent = cat === 'hat' ? 'Tamaño del sombrero' : 'Tamaño de las gafas';
+    document.getElementById('sizeSlider').value = accessoryTransform[cat].scale;
+    document.getElementById('sizeValue').textContent = Math.round(accessoryTransform[cat].scale * 100) + '%';
+}
+
+function onSizeSlider(v) {
+    var cat = currentPropTab;
+    if (cat !== 'hat' && cat !== 'glasses') return;
+    activeAccessory = cat;
+    setAccessoryScale(cat, parseFloat(v));
+}
+
+function resetAccessory() {
+    var cat = currentPropTab;
+    if (cat !== 'hat' && cat !== 'glasses') return;
+    accessoryTransform[cat] = { dx: 0, dy: 0, scale: 1 };
+    updateAccessoryControls();
 }
 
 // ===== Video layer + filters =====
@@ -799,7 +1004,81 @@ var FILTERS = {
     halloween: { css: 'contrast(1.2) saturate(1.3) brightness(0.9) sepia(0.25)', tint: 'rgba(255,90,0,0.32)', vignette: 'rgba(40,0,70,0.75)' }
 };
 
-function drawVideoLayer(w, h) {
+var distCanvas = document.createElement('canvas');
+var distCtx = distCanvas.getContext('2d', { willReadFrequently: true });
+
+// Remaps vidCanvas through a geometric distortion. Preview works at half resolution for speed.
+function applyDistortion(id, w, h, t) {
+    if (id === 'pixelate') {
+        var pw = Math.max(1, Math.round(w / 28)), ph2 = Math.max(1, Math.round(h / 28));
+        distCanvas.width = pw; distCanvas.height = ph2;
+        distCtx.drawImage(vidCanvas, 0, 0, pw, ph2);
+        vidCtx.imageSmoothingEnabled = false;
+        vidCtx.drawImage(distCanvas, 0, 0, pw, ph2, 0, 0, w, h);
+        vidCtx.imageSmoothingEnabled = true;
+        return;
+    }
+    var k = renderHQ ? 1 : 0.4;
+    var sw = Math.round(w * k), sh = Math.round(h * k);
+    if (distCanvas.width !== sw || distCanvas.height !== sh) { distCanvas.width = sw; distCanvas.height = sh; }
+    distCtx.drawImage(vidCanvas, 0, 0, sw, sh);
+    var sd = distCtx.getImageData(0, 0, sw, sh).data;
+    var dst = distCtx.createImageData(sw, sh);
+    var dd = dst.data;
+    var cx = sw / 2, cy = sh / 2;
+    var R = Math.min(sw, sh) * 0.6;
+    var phase = t * 0.004;
+    var maxX = sw - 1.001, maxY = sh - 1.001;
+    for (var y = 0; y < sh; y++) {
+        for (var x = 0; x < sw; x++) {
+            var sx = x, sy = y, dx = x - cx, dy = y - cy, r, a, c, s;
+            switch (id) {
+                case 'bulge':
+                    r = Math.sqrt(dx * dx + dy * dy) / R;
+                    if (r < 1 && r > 0) { var m = Math.pow(r, 0.8); sx = cx + dx * m; sy = cy + dy * m; }
+                    break;
+                case 'pinch':
+                    r = Math.sqrt(dx * dx + dy * dy) / R;
+                    if (r < 1 && r > 0.0001) { var m2 = Math.pow(r, -0.45); sx = cx + dx * m2; sy = cy + dy * m2; }
+                    break;
+                case 'swirl':
+                    r = Math.sqrt(dx * dx + dy * dy) / R;
+                    if (r < 1) {
+                        a = 3.2 * (1 - r) * (1 - r);
+                        c = Math.cos(a); s = Math.sin(a);
+                        sx = cx + dx * c - dy * s; sy = cy + dx * s + dy * c;
+                    }
+                    break;
+                case 'wave':
+                    sx = x + Math.sin(y / sh * Math.PI * 6 + phase) * sw * 0.025;
+                    break;
+                case 'mirror':
+                    if (x > cx) sx = 2 * cx - x;
+                    break;
+                case 'wide':
+                    sx = cx + dx * (0.55 + 0.9 * Math.abs(dy) / cy);
+                    break;
+                case 'tall':
+                    sy = cy + dy * (0.55 + 0.9 * Math.abs(dx) / cx);
+                    break;
+            }
+            if (sx < 0) sx = 0; else if (sx > maxX) sx = maxX;
+            if (sy < 0) sy = 0; else if (sy > maxY) sy = maxY;
+            var x0 = sx | 0, y0 = sy | 0, fx = sx - x0, fy = sy - y0;
+            var i00 = (y0 * sw + x0) * 4, i10 = i00 + 4, i01 = i00 + sw * 4, i11 = i01 + 4;
+            var o = (y * sw + x) * 4;
+            var w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+            dd[o] = sd[i00] * w00 + sd[i10] * w10 + sd[i01] * w01 + sd[i11] * w11;
+            dd[o + 1] = sd[i00 + 1] * w00 + sd[i10 + 1] * w10 + sd[i01 + 1] * w01 + sd[i11 + 1] * w11;
+            dd[o + 2] = sd[i00 + 2] * w00 + sd[i10 + 2] * w10 + sd[i01 + 2] * w01 + sd[i11 + 2] * w11;
+            dd[o + 3] = 255;
+        }
+    }
+    distCtx.putImageData(dst, 0, 0);
+    vidCtx.drawImage(distCanvas, 0, 0, sw, sh, 0, 0, w, h);
+}
+
+function drawVideoLayer(w, h, t) {
     if (vidCanvas.width !== w || vidCanvas.height !== h) { vidCanvas.width = w; vidCanvas.height = h; }
     var f = FILTERS[selectedProps.filter];
     vidCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -840,6 +1119,7 @@ function drawVideoLayer(w, h) {
         vidCtx.fillStyle = vg;
         vidCtx.fillRect(0, 0, w, h);
     }
+    if (ready && selectedProps.distort !== 'none') applyDistortion(selectedProps.distort, w, h, t);
 }
 
 function pixelEach(ctx, w, h, fn) {
@@ -883,7 +1163,11 @@ function drawHat(ctx, f, id) {
     var u = f.w;
     var cx = f.cx;
     var y0 = f.top + f.h * 0.12;     // line where the hat sits on the head
+    var tr = accessoryTransform.hat;
     ctx.save();
+    ctx.translate(cx + tr.dx * u, y0 + tr.dy * u);
+    ctx.scale(tr.scale, tr.scale);
+    ctx.translate(-cx, -y0);
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(2, u * 0.015);
     ctx.strokeStyle = 'rgba(0,0,0,0.55)';
@@ -1098,7 +1382,11 @@ function drawGlasses(ctx, f, id) {
     var ey = f.eyeY;
     var cxL = f.cx - ex, cxR = f.cx + ex;
     var r = 0.17 * u;
+    var gt = accessoryTransform.glasses;
     ctx.save();
+    ctx.translate(f.cx + gt.dx * u, ey + gt.dy * u);
+    ctx.scale(gt.scale, gt.scale);
+    ctx.translate(-f.cx, -ey);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     switch (id) {
@@ -1611,8 +1899,10 @@ function renderTabs() {
 
 function switchPropTab(key) {
     currentPropTab = key;
+    if (key === 'hat' || key === 'glasses') activeAccessory = key;
     renderTabs();
     loadProps();
+    updateAccessoryControls();
 }
 
 function loadProps() {
@@ -1823,22 +2113,26 @@ function takePhoto() {
     void flash.offsetWidth;
     flash.classList.add('go');
 
+    var shotStart = performance.now();
     capturePhoto().then(function() {
         if (!isSessionRunning) return;
+        var spent = performance.now() - shotStart;      // keep the rhythm even if capture was slow
         currentPhotoIndex++;
         if (currentPhotoIndex >= PHOTO_COUNT) { endPhotoSession(); return; }
         document.getElementById('recCount').textContent = String(currentPhotoIndex + 1);
         updateStatus('Siguiente foto en ' + TIME_BETWEEN_PHOTOS + '…');
         updateNextPhotoCountdown();
         showPose(currentPhotoIndex);
-        later(function() { takePhoto(); }, TIME_BETWEEN_PHOTOS * 1000);
+        later(function() { takePhoto(); }, Math.max(500, TIME_BETWEEN_PHOTOS * 1000 - spent));
     });
 }
 
 function capturePhoto() {
     return new Promise(function(resolve) {
         var w = previewCanvas.width, h = previewCanvas.height;
-        renderFrame(previewCtx, w, h, performance.now());   // same pipeline as the live preview
+        renderHQ = true;                                    // full-res distortion for the saved photo
+        renderFrame(previewCtx, w, h, performance.now(), false);   // same pipeline as the live preview, no guides
+        renderHQ = false;
         // Copy so the emoji stamp lands only in the saved photo, not in the live preview.
         var shot = document.createElement('canvas');
         shot.width = w; shot.height = h;

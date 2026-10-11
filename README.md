@@ -16,6 +16,8 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
   - Efectos animados (bokeh, destellos, corazones, estrellas, burbujas, fuegos, glitch, murciélagos, fantasmas)
 - Los sombreros y gafas se colocan sobre la cara usando la API `FaceDetector` si el navegador la ofrece; si no, sobre una posición centrada
 - **Retos de pose**: antes de cada foto aparece un emoji (cara o gesto) con su nombre; el usuario lo imita y el emoji queda estampado en pequeño en la esquina inferior izquierda de esa foto
+- **Distorsiones** (pestaña propia, combinables con los filtros de color): ojo de pez, pellizco, torbellino, ondas, espejo, feria ancha, alargado y pixelado
+- **Sombreros y gafas manipulables**: arrastra el accesorio sobre la cámara para moverlo; rueda del ratón, pellizco táctil o slider para cambiar el tamaño; botón Restablecer
 - **Tiempos fijos**: 3 segundos de cuenta atrás inicial y 3 segundos entre fotos
 - **Descarga automática** de la tira de fotos en formato JPG
 - **Diseño Full HD** optimizado para 1920x1080
