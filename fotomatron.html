@@ -756,6 +756,10 @@
             <span>◎ Arrastra el punto de la cámara para mover el centro del efecto.</span>
             <button class="btn secondary small" type="button" onclick="resetDistortCenter()">↺ Centrar</button>
         </div>
+        <div class="distort-controls" id="wishiControls" style="display:none;">
+            <span>🧽 Muévete delante de la cámara para limpiar la pantalla y ver la imagen. La suciedad vuelve poco a poco.</span>
+            <button class="btn secondary small" type="button" onclick="resetWishi()">↺ Ensuciar de nuevo</button>
+        </div>
         <div class="accessory-controls effect-controls" id="effectControls" style="display:none;">
             <label class="switch-row" for="fxReact">
                 <input type="checkbox" id="fxReact" checked onchange="onEffectReact(this.checked)">
@@ -900,7 +904,8 @@ var propCategories = [
         { id: 'sunset', name: 'Atardecer', emoji: '🌅' },
         { id: 'party', name: 'Fiesta', emoji: '🎉' },
         { id: 'winter', name: 'Invierno', emoji: '☃️' },
-        { id: 'graveyard', name: 'Cementerio', emoji: '⚰️' }
+        { id: 'graveyard', name: 'Cementerio', emoji: '⚰️' },
+        { id: 'wishi', name: 'Wishi Washi', emoji: '🧽' }
     ]},
     { key: 'effect', label: 'Decoración', icon: '✨', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -952,6 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAccessoryControls();
     updateDistortControls();
     updateEffectControls();
+    updateWishiControls();
     setupAccessoryInteraction();
     initializeCamera();
     requestAnimationFrame(renderLoop);
@@ -1043,7 +1049,9 @@ function renderLoop(now) {
         }
         if (lastClockNow !== null) effectClock += Math.min(100, now - lastClockNow) * effectSettings.speed;
         lastClockNow = now;
-        if (effectSettings.react && effects.length) updateMotion(now);
+        var wishiOn = selectedProps.background === 'wishi';
+        if (wishiOn || (effectSettings.react && effects.length)) updateMotion(now);
+        if (wishiOn) stepWishi(now);
         if (now - lastFaceCheck > 200) { lastFaceCheck = now; detectFace(); }
         renderFrame(previewCtx, previewCanvas.width, previewCanvas.height, now, true);
     }
@@ -1052,7 +1060,7 @@ function renderLoop(now) {
 
 function renderFrame(ctx, w, h, t, guides) {
     var bg = selectedProps.background;
-    var hasBg = bg && bg !== 'none';
+    var hasBg = bg && bg !== 'none' && bg !== 'wishi';
 
     drawVideoLayer(w, h, t);
 
@@ -1077,6 +1085,7 @@ function renderFrame(ctx, w, h, t, guides) {
         ctx.drawImage(vidCanvas, 0, 0);
     }
 
+    if (bg === 'wishi') drawWishi(ctx, w, h);        // grime over the picture, wiped away by movement
     var face = getFace(w, h);
     drawPlaced(ctx, face);
     effects.forEach(function(id) { drawEffect(ctx, w, h, id, effectClock); });
@@ -2399,6 +2408,120 @@ function stepParticle(st, X, Y, dt, w, h, idx) {
 
 var fxStates = {};   // decoration id -> { last: clock of previous step, p: [per-particle state] }
 
+// ===== Wishi Washi: a dirty window that movement wipes clean, revealing the camera picture =====
+var wishi = {
+    mask: new Float32Array(MOTION_W * MOTION_H).fill(1),     // 1 = fully dirty, 0 = clean
+    last: null,
+    tex: null, texKey: '',                                   // cached grime texture for the current frame size
+    maskCanvas: document.createElement('canvas'),
+    tmp: document.createElement('canvas'),
+    clean: 0                                                  // fraction cleaned, 0..1
+};
+wishi.maskCanvas.width = MOTION_W; wishi.maskCanvas.height = MOTION_H;
+wishi.maskCtx = wishi.maskCanvas.getContext('2d');
+wishi.tmpCtx = wishi.tmp.getContext('2d');
+
+function resetWishi() {
+    wishi.mask.fill(1);
+    wishi.clean = 0;
+}
+
+function stepWishi(now) {
+    var dt = wishi.last === null ? 0 : Math.min(0.1, (now - wishi.last) / 1000);
+    wishi.last = now;
+    if (!motion.has || dt === 0) return;
+    var f = motion.field, m = wishi.mask, W = MOTION_W, H = MOTION_H, sum = 0;
+    for (var y = 0; y < H; y++) {
+        for (var x = 0; x < W; x++) {
+            var i = y * W + x;
+            var v = f[i];                                    // the "sponge" is a bit bigger than a single cell
+            if (x > 0 && f[i - 1] * 0.6 > v) v = f[i - 1] * 0.6;
+            if (x < W - 1 && f[i + 1] * 0.6 > v) v = f[i + 1] * 0.6;
+            if (y > 0 && f[i - W] * 0.6 > v) v = f[i - W] * 0.6;
+            if (y < H - 1 && f[i + W] * 0.6 > v) v = f[i + W] * 0.6;
+            var cur = m[i];
+            if (v > 0.12) cur -= v * 3.5 * dt;               // wiping
+            cur += 0.03 * dt;                                // grime slowly creeps back
+            m[i] = cur < 0 ? 0 : (cur > 1 ? 1 : cur);
+            sum += m[i];
+        }
+    }
+    wishi.clean = 1 - sum / (W * H);
+}
+
+function buildGrimeTexture(w, h) {
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    var rnd = mulberry32(20061), s = w / 1280, i;
+    var g = x.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#7a6d57'); g.addColorStop(0.5, '#5f5340'); g.addColorStop(1, '#4b4132');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    for (i = 0; i < 70; i++) {                               // big smudges
+        var bx = rnd() * w, by = rnd() * h, br = (40 + rnd() * 140) * s;
+        var dark = rnd() > 0.45;
+        var rg = x.createRadialGradient(bx, by, 0, bx, by, br);
+        rg.addColorStop(0, dark ? 'rgba(30,22,12,0.45)' : 'rgba(190,175,140,0.35)');
+        rg.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = rg; x.fillRect(bx - br, by - br, br * 2, br * 2);
+    }
+    x.lineCap = 'round';
+    for (i = 0; i < 45; i++) {                               // drips running down the glass
+        var dx = rnd() * w, dy = rnd() * h * 0.7, dl = (40 + rnd() * 220) * s;
+        x.strokeStyle = 'rgba(25,18,10,' + (0.15 + rnd() * 0.25) + ')';
+        x.lineWidth = (2 + rnd() * 5) * s;
+        x.beginPath(); x.moveTo(dx, dy); x.lineTo(dx + (rnd() - 0.5) * 10 * s, dy + dl); x.stroke();
+    }
+    for (i = 0; i < 700; i++) {                              // speckles
+        x.fillStyle = rnd() > 0.5 ? 'rgba(20,15,8,0.5)' : 'rgba(210,200,170,0.35)';
+        x.beginPath(); x.arc(rnd() * w, rnd() * h, (0.8 + rnd() * 3) * s, 0, Math.PI * 2); x.fill();
+    }
+    for (i = 0; i < 9; i++) {                                // fingerprints / smears
+        var fx = rnd() * w, fy = rnd() * h;
+        x.strokeStyle = 'rgba(210,195,160,0.18)'; x.lineWidth = 3 * s;
+        for (var r = 0; r < 5; r++) { x.beginPath(); x.ellipse(fx, fy, (14 + r * 9) * s, (20 + r * 11) * s, 0.4, 0, Math.PI * 2); x.stroke(); }
+    }
+    x.textAlign = 'center'; x.textBaseline = 'middle';       // the hint is part of the grime: it disappears when wiped
+    x.fillStyle = 'rgba(255,255,255,0.5)';
+    x.font = '700 ' + Math.round(70 * s) + 'px "Fredoka", "Segoe UI", sans-serif';
+    x.fillText('¡MUÉVETE PARA LIMPIAR!', w / 2, h * 0.46);
+    x.font = Math.round(120 * s) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    x.fillText('🧽', w / 2, h * 0.62);
+    return c;
+}
+
+function drawWishi(ctx, w, h) {
+    var key = w + 'x' + h;
+    if (wishi.texKey !== key) { wishi.tex = buildGrimeTexture(w, h); wishi.texKey = key; }
+    // mask cells -> alpha (soft-stepped so edges look wiped rather than faded)
+    var img = wishi.maskCtx.createImageData(MOTION_W, MOTION_H), d = img.data, m = wishi.mask;
+    for (var i = 0; i < m.length; i++) {
+        var v = m[i];
+        d[i * 4 + 3] = Math.round(255 * v * v * (3 - 2 * v));
+    }
+    wishi.maskCtx.putImageData(img, 0, 0);
+    if (wishi.tmp.width !== w || wishi.tmp.height !== h) { wishi.tmp.width = w; wishi.tmp.height = h; }
+    var t = wishi.tmpCtx;
+    t.globalCompositeOperation = 'source-over';
+    t.clearRect(0, 0, w, h);
+    t.drawImage(wishi.tex, 0, 0);
+    t.globalCompositeOperation = 'destination-in';
+    t.imageSmoothingEnabled = true;
+    t.imageSmoothingQuality = 'high';
+    t.drawImage(wishi.maskCanvas, 0, 0, MOTION_W, MOTION_H, 0, 0, w, h);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.drawImage(wishi.tmp, 0, 0);
+    ctx.restore();
+}
+
+function updateWishiControls() {
+    var box = document.getElementById('wishiControls');
+    if (box) box.style.display = selectedProps.background === 'wishi' ? 'block' : 'none';
+}
+
 // ===== Effects (animated overlays) =====
 function drawEffect(ctx, w, h, id, t) {
     var s = w / 1280 * effectSettings.size;
@@ -2709,10 +2832,12 @@ function selectProp(propId, category) {
         if (propId === 'none') { effects = []; loadProps(); updateSummary(); } else toggleEffect(propId);
         return;
     }
+    if (category === 'background' && propId === 'wishi') resetWishi();     // always start dirty
     selectedProps[category] = propId;
     loadProps();
     updateSummary();
     updateDistortControls();
+    updateWishiControls();
 }
 
 function updateSummary() {
