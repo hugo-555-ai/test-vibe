@@ -468,6 +468,20 @@
             text-align: center;
         }
 
+        .switch-row {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            margin-bottom: 8px !important;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.07);
+            cursor: pointer;
+        }
+
+        .switch-row input { width: 18px; height: 18px; accent-color: var(--secondary); cursor: pointer; }
+
         .distort-controls {
             margin-top: 10px;
             padding: 8px 10px;
@@ -743,6 +757,12 @@
             <button class="btn secondary small" type="button" onclick="resetDistortCenter()">↺ Centrar</button>
         </div>
         <div class="accessory-controls effect-controls" id="effectControls" style="display:none;">
+            <label class="switch-row" for="fxReact">
+                <input type="checkbox" id="fxReact" checked onchange="onEffectReact(this.checked)">
+                <span>👋 Se apartan con el movimiento</span>
+            </label>
+            <label for="fxSens"><span>Sensibilidad</span> <span id="fxSensVal">100%</span></label>
+            <input type="range" id="fxSens" min="0.25" max="3" step="0.05" value="1" oninput="onEffectSetting('sens', this.value)">
             <label for="fxAmount"><span>Cantidad</span> <span id="fxAmountVal">100%</span></label>
             <input type="range" id="fxAmount" min="0.25" max="3" step="0.05" value="1" oninput="onEffectSetting('amount', this.value)">
             <label for="fxSpeed"><span>Velocidad</span> <span id="fxSpeedVal">100%</span></label>
@@ -750,7 +770,7 @@
             <label for="fxSize"><span>Tamaño</span> <span id="fxSizeVal">100%</span></label>
             <input type="range" id="fxSize" min="0.4" max="2.5" step="0.05" value="1" oninput="onEffectSetting('size', this.value)">
             <button class="btn secondary small" type="button" onclick="resetEffectSettings()">↺ Restablecer</button>
-            <p class="hint">Se aplican a toda la decoración activa. Velocidad 0% la deja quieta.</p>
+            <p class="hint">Se aplican a toda la decoración activa. Velocidad 0% la deja quieta (y sin reacción). Muévete o saluda delante de la cámara para apartarla.</p>
         </div>
         <div class="accessory-controls" id="accessoryControls" style="display:none;">
             <div class="placed-title">Accesorios puestos</div>
@@ -801,7 +821,7 @@ var placed = [];          // hats & glasses worn: { uid, kind, id, dx, dy, scale
 var nextUid = 1;
 var selectedUid = null;   // accessory targeted by drag / wheel / slider
 var effects = [];         // active decoration ids (they can be combined)
-var effectSettings = { amount: 1, speed: 1, size: 1 };   // shared by every active decoration
+var effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1 };   // shared by every active decoration
 var effectClock = 0;      // ms of decoration time, advanced by speed so changing it never makes things jump
 var lastClockNow = null;
 var dragState = null;
@@ -1023,6 +1043,7 @@ function renderLoop(now) {
         }
         if (lastClockNow !== null) effectClock += Math.min(100, now - lastClockNow) * effectSettings.speed;
         lastClockNow = now;
+        if (effectSettings.react && effects.length) updateMotion(now);
         if (now - lastFaceCheck > 200) { lastFaceCheck = now; detectFace(); }
         renderFrame(previewCtx, previewCanvas.width, previewCanvas.height, now, true);
     }
@@ -1189,8 +1210,15 @@ function onEffectSetting(key, value) {
     updateEffectControls();
 }
 
+function onEffectReact(on) {
+    effectSettings.react = !!on;
+    if (!on) { motion.field.fill(0); motion.level = 0; }
+    updateEffectControls();
+}
+
 function resetEffectSettings() {
-    effectSettings.amount = 1; effectSettings.speed = 1; effectSettings.size = 1;
+    effectSettings.amount = 1; effectSettings.speed = 1; effectSettings.size = 1; effectSettings.sens = 1;
+    effectSettings.react = true;
     updateEffectControls();
 }
 
@@ -1198,6 +1226,10 @@ function updateEffectControls() {
     var box = document.getElementById('effectControls');
     if (!box) return;
     box.style.display = currentPropTab === 'effect' ? 'block' : 'none';
+    document.getElementById('fxReact').checked = effectSettings.react;
+    document.getElementById('fxSens').disabled = !effectSettings.react;
+    document.getElementById('fxSens').value = effectSettings.sens;
+    document.getElementById('fxSensVal').textContent = Math.round(effectSettings.sens * 100) + '%';
     ['amount', 'speed', 'size'].forEach(function(k) {
         var name = k.charAt(0).toUpperCase() + k.slice(1);
         document.getElementById('fx' + name).value = effectSettings[k];
@@ -2275,11 +2307,114 @@ function drawBackground(ctx, w, h, id, t) {
     ctx.restore();
 }
 
+// ===== Motion field: decorations move out of the way of anything that moves in front of the camera =====
+var MOTION_W = 64, MOTION_H = 48;
+var motion = {
+    prev: new Uint8Array(MOTION_W * MOTION_H),
+    cur: new Uint8Array(MOTION_W * MOTION_H),
+    field: new Float32Array(MOTION_W * MOTION_H),    // 0..1 "how much did this cell just move"
+    has: false,
+    level: 0                                         // average movement over the whole frame
+};
+var motionCanvas = document.createElement('canvas');
+motionCanvas.width = MOTION_W; motionCanvas.height = MOTION_H;
+var motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true });
+var motionLast = 0;
+
+function updateMotion(now) {
+    if (!cameraView || cameraView.readyState < 2 || !cameraView.videoWidth) return;
+    if (now - motionLast < 33) return;                // ~30 Hz is plenty
+    motionLast = now;
+    motionCtx.save();
+    motionCtx.translate(MOTION_W, 0);
+    motionCtx.scale(-1, 1);                           // same orientation as the mirrored preview
+    motionCtx.drawImage(cameraView, 0, 0, MOTION_W, MOTION_H);
+    motionCtx.restore();
+    var d = motionCtx.getImageData(0, 0, MOTION_W, MOTION_H).data;
+    var n = MOTION_W * MOTION_H, cur = motion.cur, prev = motion.prev, f = motion.field;
+    var shift = 0, i;
+    for (i = 0; i < n; i++) {
+        cur[i] = (d[i * 4] * 77 + d[i * 4 + 1] * 151 + d[i * 4 + 2] * 28) >> 8;
+        shift += cur[i] - prev[i];
+    }
+    shift = motion.has ? shift / n : 0;               // global brightness change (auto exposure) is not movement
+    var sum = 0, k = effectSettings.sens / 35;
+    for (i = 0; i < n; i++) {
+        var diff = Math.abs(cur[i] - prev[i] - shift) - 10;     // 10 = sensor noise floor
+        var v = diff > 0 ? Math.min(1, diff * k) : 0;
+        f[i] = v > f[i] * 0.85 ? v : f[i] * 0.85;                // brief gestures linger a moment
+        sum += f[i];
+        prev[i] = cur[i];
+    }
+    motion.has = true;
+    motion.level = sum / n;
+}
+
+// Result of motionAt(): strength 0..1 and unit direction pointing away from the nearby movement.
+var MS = 0, MDX = 0, MDY = 0, MLEN = 0;
+function motionAt(X, Y, w, h) {
+    MS = 0;
+    var f = motion.field, gx = X / w * MOTION_W, gy = Y / h * MOTION_H, rc = 12;
+    var x0 = Math.max(0, Math.floor(gx - rc)), x1 = Math.min(MOTION_W - 1, Math.ceil(gx + rc));
+    var y0 = Math.max(0, Math.floor(gy - rc)), y1 = Math.min(MOTION_H - 1, Math.ceil(gy + rc));
+    var sw = 0, sx = 0, sy = 0;
+    for (var yy = y0; yy <= y1; yy++) {
+        for (var xx = x0; xx <= x1; xx++) {
+            var v = f[yy * MOTION_W + xx];
+            if (v < 0.08) continue;
+            var ddx = xx + 0.5 - gx, ddy = yy + 0.5 - gy, dd = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (dd > rc) continue;
+            var wgt = v * (1 - dd / rc);
+            sw += wgt; sx += (xx + 0.5) * wgt; sy += (yy + 0.5) * wgt;
+        }
+    }
+    if (sw < 0.3) return;
+    var ax = gx - sx / sw, ay = gy - sy / sw;
+    MLEN = Math.sqrt(ax * ax + ay * ay);
+    if (MLEN > 0.3) { MDX = ax / MLEN; MDY = ay / MLEN; }
+    MS = Math.min(1, sw / 6);
+}
+
+// One simulation step for a particle's displacement: pushed away by movement, drifts back home afterwards.
+function stepParticle(st, X, Y, dt, w, h, idx) {
+    var S = w / 1280;
+    if (effectSettings.react && motion.has) {
+        motionAt(X, Y, w, h);
+        if (MS > 0) {
+            var dx = MDX, dy = MDY;
+            if (MLEN <= 0.3) { var ang = (idx * 2.399) % 6.283; dx = Math.cos(ang); dy = Math.sin(ang); }
+            var acc = 5200 * S * MS * (0.7 + 0.6 * ((idx * 0.618) % 1));     // a little variety between particles
+            st.vx += dx * acc * dt;
+            st.vy += dy * acc * dt;
+        }
+    }
+    st.vx -= st.ox * 2.0 * dt;
+    st.vy -= st.oy * 2.0 * dt;
+    var damp = Math.exp(-2.8 * dt);
+    st.vx *= damp; st.vy *= damp;
+    st.ox += st.vx * dt; st.oy += st.vy * dt;
+    var lim = w * 0.55, len = Math.sqrt(st.ox * st.ox + st.oy * st.oy);
+    if (len > lim) { st.ox *= lim / len; st.oy *= lim / len; }
+}
+
+var fxStates = {};   // decoration id -> { last: clock of previous step, p: [per-particle state] }
+
 // ===== Effects (animated overlays) =====
 function drawEffect(ctx, w, h, id, t) {
     var s = w / 1280 * effectSettings.size;
     var amount = effectSettings.amount;
     function cnt(n) { return Math.max(1, Math.round(n * amount)); }
+    var fx = fxStates[id] || (fxStates[id] = { last: null, p: [] });
+    var fxDt = fx.last === null ? 0 : Math.max(0, Math.min(0.1, (t - fx.last) / 1000));
+    fx.last = t;
+    var RX = 0, RY = 0;
+    // push(): displaced position of particle idx given its undisturbed position (px, py) -> RX, RY
+    function push(idx, px, py) {
+        var st = fx.p[idx] || (fx.p[idx] = { ox: 0, oy: 0, vx: 0, vy: 0 });
+        if (fxDt > 0) stepParticle(st, px + st.ox, py + st.oy, fxDt, w, h, idx);
+        st.bx = px; st.by = py;                     // undisturbed position (handy for debugging/tests)
+        RX = px + st.ox; RY = py + st.oy;
+    }
     var sec = t / 1000;
     var rnd = mulberry32(hashStr('fx' + id));
     var i, x, y, r, p, g;
@@ -2290,6 +2425,7 @@ function drawEffect(ctx, w, h, id, t) {
             for (i = 0; i < cnt(18); i++) {
                 x = ((rnd() + sec * (0.008 + rnd() * 0.015)) % 1) * w;
                 y = (rnd() + Math.sin(sec * 0.6 + i) * 0.03) * h;
+                push(i, x, y); x = RX; y = RY;
                 r = (20 + rnd() * 50) * s;
                 var hue = Math.floor(rnd() * 360);
                 g = ctx.createRadialGradient(x, y, 0, x, y, r);
@@ -2303,6 +2439,7 @@ function drawEffect(ctx, w, h, id, t) {
         case 'sparkles':
             for (i = 0; i < cnt(32); i++) {
                 x = rnd() * w; y = rnd() * h;
+                push(i, x, y); x = RX; y = RY;
                 var tw = 0.5 + 0.5 * Math.sin(sec * 3 + rnd() * 6.28);
                 r = (6 + rnd() * 16) * s * tw;
                 fillSparkle(ctx, x, y, r, ['#ffffff', '#ffe66d', '#4ecdc4', '#ff9ecd'][i % 4]);
@@ -2313,6 +2450,7 @@ function drawEffect(ctx, w, h, id, t) {
                 x = (rnd() + Math.sin(sec + i) * 0.02) * w;
                 p = (rnd() + sec * (0.06 + rnd() * 0.08)) % 1;
                 y = h * (1.1 - p * 1.2);
+                push(i, x, y); x = RX; y = RY;
                 fillHeart(ctx, x, y, (14 + rnd() * 22) * s, 'rgba(255,45,100,0.85)');
             }
             break;
@@ -2321,6 +2459,7 @@ function drawEffect(ctx, w, h, id, t) {
                 x = rnd() * w;
                 p = (rnd() + sec * (0.05 + rnd() * 0.07)) % 1;
                 y = h * (p * 1.2 - 0.1);
+                push(i, x, y); x = RX; y = RY;
                 fillStar(ctx, x, y, (12 + rnd() * 20) * s, sec * (0.5 + rnd()) + i, '#ffd60a');
             }
             break;
@@ -2329,6 +2468,7 @@ function drawEffect(ctx, w, h, id, t) {
                 x = (rnd() + Math.sin(sec * 1.2 + i) * 0.015) * w;
                 p = (rnd() + sec * (0.05 + rnd() * 0.08)) % 1;
                 y = h * (1.1 - p * 1.2);
+                push(i, x, y); x = RX; y = RY;
                 r = (8 + rnd() * 24) * s;
                 g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
                 g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(140,210,255,0.12)');
@@ -2346,6 +2486,7 @@ function drawEffect(ctx, w, h, id, t) {
                 p = ((sec + off) % period) / period;
                 var r2 = mulberry32(b * 131 + cycle * 977 + 7);
                 var cx = (0.15 + r2() * 0.7) * w, cy = (0.12 + r2() * 0.4) * h;
+                push(b, cx, cy); cx = RX; cy = RY;
                 var hue2 = Math.floor(r2() * 360);
                 var ease = 1 - Math.pow(1 - p, 3);
                 for (var k = 0; k < 28; k++) {
@@ -2362,6 +2503,7 @@ function drawEffect(ctx, w, h, id, t) {
             for (i = 0; i < cnt(6); i++) {
                 x = (((rnd() + sec * (0.04 + rnd() * 0.06)) % 1.2) - 0.1) * w;
                 y = (0.08 + rnd() * 0.5) * h + Math.sin(sec * 2 + i) * 18 * s;
+                push(i, x, y); x = RX; y = RY;
                 r = (18 + rnd() * 18) * s;
                 var flap = Math.sin(sec * 12 + i * 2) * 0.55;
                 ctx.beginPath();
@@ -2383,6 +2525,7 @@ function drawEffect(ctx, w, h, id, t) {
             for (i = 0; i < cnt(4); i++) {
                 x = (0.12 + rnd() * 0.76) * w + Math.sin(sec * 0.9 + i * 2) * 30 * s;
                 y = (0.15 + rnd() * 0.6) * h + Math.cos(sec * 1.1 + i) * 25 * s;
+                push(i, x, y); x = RX; y = RY;
                 r = (28 + rnd() * 26) * s;
                 ctx.fillStyle = 'rgba(255,255,255,0.72)';
                 ctx.beginPath();
@@ -2406,8 +2549,9 @@ function drawEffect(ctx, w, h, id, t) {
             break;
         case 'glitch':
             var gr = mulberry32(Math.floor(t / 140) * 7919 + 13);
+            var glitchBoost = (effectSettings.react && motion.has) ? 1 + 4 * Math.min(1, motion.level * 10) : 1;
             for (i = 0; i < cnt(7); i++) {
-                y = gr() * h; var sh = (0.015 + gr() * 0.07) * h * effectSettings.size; var dx = (gr() - 0.5) * 0.14 * w;
+                y = gr() * h; var sh = (0.015 + gr() * 0.07) * h * effectSettings.size; var dx = (gr() - 0.5) * 0.14 * w * glitchBoost;
                 if (gr() > 0.25) ctx.drawImage(ctx.canvas, 0, y, w, sh, dx, y, w, sh);
             }
             ctx.globalCompositeOperation = 'screen';
