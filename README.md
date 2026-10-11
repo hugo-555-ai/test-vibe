@@ -13,7 +13,7 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
   - Sombreros (vaquero, corona, Santa, fiesta, chef, pirata, graduación, bruja, calabaza, diablillo)
   - Gafas (sol, nerd, corazones, estrellas, 3D, monóculo, natación, ojos rojos, ojos calabaza, barra negra y pixelado de privacidad)
   - Fondos (playa, espacio, ciudad, bosque, atardecer, fiesta, invierno, cementerio, Wishi Washi: pantalla sucia que el movimiento va limpiando para revelar la imagen): la persona se recorta en un óvalo sobre el escenario
-  - Decoración animada (bokeh, destellos, corazones, estrellas, burbujas, fuegos, glitch, murciélagos, fantasmas, relámpagos con trueno sintetizado y interruptor de sonido)
+  - Decoración animada (bokeh, destellos, corazones, estrellas, burbujas, fuegos, glitch, murciélagos, fantasmas, relámpagos con trueno sintetizado y lluvia con sonido ambiente, con un interruptor de sonido común)
 - Los sombreros y gafas se colocan sobre la cara usando la API `FaceDetector` si el navegador la ofrece; si no, sobre una posición centrada
 - **Retos de pose**: antes de cada foto aparece un emoji (cara o gesto, de un repertorio de 58: encogimiento de hombros, facepalm, mente explotando, ojos en blanco...) con su nombre; el usuario lo imita y el emoji queda estampado en pequeño en la esquina inferior izquierda de esa foto El emoji vibra y late de tamaño para llamar la atención, y en el último segundo antes de la foto lo hace más rápido
 - **Acabado-1** (pestaña propia, de elección única): cómic, neón (bordes), fotocopia, solarizar, mapas de color (térmica, dúo neón, dorado), planeta (coordenadas polares) y medios tonos
