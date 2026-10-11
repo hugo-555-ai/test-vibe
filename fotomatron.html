@@ -760,6 +760,10 @@
             <span>🧽 Muévete delante de la cámara para limpiar la pantalla y ver la imagen. La suciedad vuelve poco a poco.</span>
             <button class="btn secondary small" type="button" onclick="resetWishi()">↺ Ensuciar de nuevo</button>
         </div>
+        <div class="accessory-controls halftone-controls" id="halftoneControls" style="display:none;">
+            <label for="dotSize"><span>Tamaño del punto</span> <span id="dotSizeVal">100%</span></label>
+            <input type="range" id="dotSize" min="0.5" max="3" step="0.05" value="1" oninput="onHalftoneDot(this.value)">
+        </div>
         <div class="accessory-controls effect-controls" id="effectControls" style="display:none;">
             <label class="switch-row" for="fxReact">
                 <input type="checkbox" id="fxReact" checked onchange="onEffectReact(this.checked)">
@@ -825,6 +829,8 @@ var placed = [];          // hats & glasses worn: { uid, kind, id, dx, dy, scale
 var nextUid = 1;
 var selectedUid = null;   // accessory targeted by drag / wheel / slider
 var effects = [];         // active decoration ids (they can be combined)
+var finishLayers = [];    // active Acabado-2 layers (stackable)
+var finishSettings = { dot: 1 };   // halftone dot size multiplier
 var effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1 };   // shared by every active decoration
 var effectClock = 0;      // ms of decoration time, advanced by speed so changing it never makes things jump
 var lastClockNow = null;
@@ -868,7 +874,7 @@ var propCategories = [
         { id: 'melt', name: 'Derretido', emoji: '🍦' },
         { id: 'rgbsplit', name: 'RGB', emoji: '📺' }
     ]},
-    { key: 'finish', label: 'Acabado', icon: '🖌️', items: [
+    { key: 'finish', label: 'Acabado-1', icon: '🖌️', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
         { id: 'comic', name: 'Cómic', emoji: '💥' },
         { id: 'neon', name: 'Neón', emoji: '💡' },
@@ -879,6 +885,13 @@ var propCategories = [
         { id: 'gold', name: 'Dorado', emoji: '🏆' },
         { id: 'planet', name: 'Planeta', emoji: '🌍' },
         { id: 'halftone', name: 'Medios tonos', emoji: '🔴' }
+    ]},
+    { key: 'finish2', label: 'Acabado-2', icon: '🎞️', items: [
+        { id: 'none', name: 'Ninguno', emoji: '🚫' },
+        { id: 'vignette', name: 'Viñeta', emoji: '⚫' },
+        { id: 'grain', name: 'Grano', emoji: '🌫️' },
+        { id: 'crt', name: 'CRT', emoji: '📺' },
+        { id: 'glow', name: 'Resplandor', emoji: '🌟' }
     ]},
     { key: 'hat', label: 'Sombreros', icon: '🎩', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -1102,6 +1115,7 @@ function renderFrame(ctx, w, h, t, guides) {
     drawPlaced(ctx, face);
     effects.forEach(function(id) { drawEffect(ctx, w, h, id, effectClock); });
     if (warholOn()) applyWarhol(ctx.canvas, ctx, w, h);          // pop-art grid over everything drawn so far
+    if (finishLayers.length) drawFinishLayers(ctx, w, h, t);     // Acabado-2: vignette, grain, CRT, glow
     if (guides) {
         if (warholOn()) {                                          // editing aids repeated in each of the four panels
             for (var q = 0; q < 4; q++) {
@@ -1699,9 +1713,75 @@ function applyFinish(id, w, h, t) {
     vidCtx.restore();
 }
 
+var grainPool = null;
+var glowSmall = document.createElement('canvas');
+var glowCtx = glowSmall.getContext('2d');
+
+function getGrainPool() {
+    if (grainPool) return grainPool;
+    grainPool = [];
+    for (var k = 0; k < 4; k++) {
+        var c = document.createElement('canvas');
+        c.width = c.height = 192;
+        var x = c.getContext('2d'), img = x.createImageData(192, 192), d = img.data;
+        for (var i = 0; i < d.length; i += 4) { var v = Math.random() * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+        x.putImageData(img, 0, 0);
+        grainPool.push(c);
+    }
+    return grainPool;
+}
+
+// Order is fixed: glow -> CRT -> grain -> vignette, whatever the click order.
+function drawFinishLayers(ctx, w, h, t) {
+    var s = w / 1280;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.imageSmoothingEnabled = true;
+
+    if (finishLayers.indexOf('glow') >= 0) {                  // soft glow (Orton): blurred copy screened over the picture
+        var gw = Math.max(8, Math.round(w / 10)), gh = Math.max(6, Math.round(h / 10));
+        if (glowSmall.width !== gw || glowSmall.height !== gh) { glowSmall.width = gw; glowSmall.height = gh; }
+        glowCtx.drawImage(ctx.canvas, 0, 0, w, h, 0, 0, gw, gh);
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(glowSmall, 0, 0, gw, gh, 0, 0, w, h);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+    }
+    if (finishLayers.indexOf('crt') >= 0) {                   // scanlines, a slow rolling bar and a touch of flicker
+        var gap = Math.max(3, Math.round(4 * s));
+        var ys = h / gap | 0;
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.38 + 0.06 * Math.sin(t * 0.03)) + ')';
+        for (var i = 0; i < ys; i++) ctx.fillRect(0, i * gap + gap - Math.max(1, Math.round(gap / 3)), w, Math.max(1, Math.round(gap / 3)));
+        var by = (((t / 1000) * 0.15) % 1.4 - 0.2) * h, bh = h * 0.16;
+        var bg = ctx.createLinearGradient(0, by, 0, by + bh);
+        bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.07)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = bg; ctx.fillRect(0, by, w, bh);
+    }
+    if (finishLayers.indexOf('grain') >= 0) {                 // film grain: neutral-grey noise in "overlay" mode, re-randomised every frame
+        var pool = getGrainPool(), tex = pool[(Math.random() * pool.length) | 0];
+        var ox = -((Math.random() * 192) | 0), oy = -((Math.random() * 192) | 0);
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.5;
+        for (var gy = oy; gy < h; gy += 192) for (var gx = ox; gx < w; gx += 192) ctx.drawImage(tex, gx, gy);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+    }
+    if (finishLayers.indexOf('vignette') >= 0) {
+        var vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.32, w / 2, h / 2, Math.hypot(w, h) * 0.52);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(0,0,0,0.72)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
+}
+
 // Pop-art halftone: one colour dot per cell, bigger where the picture is darker, on newsprint-coloured paper.
 function applyHalftone(w, h) {
-    var cell = Math.max(8, Math.round(w / 90));
+    var cell = Math.max(6, Math.round(w / 90 * finishSettings.dot));
     var cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
     if (finishCanvas.width !== cols || finishCanvas.height !== rows) { finishCanvas.width = cols; finishCanvas.height = rows; }
     finishCtx.drawImage(vidCanvas, 0, 0, w, h, 0, 0, cols, rows);
@@ -2712,6 +2792,17 @@ function drawWishi(ctx, w, h) {
 function updateWishiControls() {
     var box = document.getElementById('wishiControls');
     if (box) box.style.display = selectedProps.background === 'wishi' ? 'block' : 'none';
+    var ht = document.getElementById('halftoneControls');
+    if (ht) {
+        ht.style.display = (selectedProps.finish === 'halftone' && currentPropTab === 'finish') ? 'block' : 'none';
+        document.getElementById('dotSize').value = finishSettings.dot;
+        document.getElementById('dotSizeVal').textContent = Math.round(finishSettings.dot * 100) + '%';
+    }
+}
+
+function onHalftoneDot(v) {
+    finishSettings.dot = parseFloat(v);
+    updateWishiControls();
 }
 
 // ===== Effects (animated overlays) =====
@@ -2985,18 +3076,21 @@ function switchPropTab(key) {
     loadProps();
     updateEffectControls();
     updateAccessoryControls();
+    updateWishiControls();
 }
 
 function loadProps() {
     var grid = document.getElementById('propsGrid');
     grid.innerHTML = '';
     var cat = getCategory(currentPropTab);
-    var multi = (cat.key === 'hat' || cat.key === 'glasses' || cat.key === 'effect');
+    var multi = (cat.key === 'hat' || cat.key === 'glasses' || cat.key === 'effect' || cat.key === 'finish2');
     cat.items.forEach(function(prop) {
         var count = 0, on = false;
         if (cat.key === 'hat' || cat.key === 'glasses') {
             count = placed.filter(function(p) { return p.kind === cat.key && p.id === prop.id; }).length;
             on = count > 0;
+        } else if (cat.key === 'finish2') {
+            on = finishLayers.indexOf(prop.id) >= 0;
         } else if (cat.key === 'effect') {
             on = effects.indexOf(prop.id) >= 0;
         } else {
@@ -3007,7 +3101,7 @@ function loadProps() {
         var item = document.createElement('button');
         item.type = 'button';
         item.className = 'prop-item' + (on && !isNone ? ' selected' : '') + (isNone && !multi && on ? ' selected' : '');
-        item.title = multi && !isNone ? (cat.key === 'effect' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)')
+        item.title = multi && !isNone ? (cat.key === 'effect' || cat.key === 'finish2' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)')
             : (!multi && !isNone ? 'Pulsa de nuevo para quitarlo' : label);
         item.innerHTML = '<span class="prop-emoji">' + prop.emoji + '</span><span class="prop-name">' + label + '</span>' +
             (count > 0 ? '<span class="prop-count">×' + count + '</span>' : '');
@@ -3023,6 +3117,12 @@ function selectProp(propId, category) {
     }
     if (category === 'effect') {
         if (propId === 'none') { effects = []; loadProps(); updateSummary(); } else toggleEffect(propId);
+        return;
+    }
+    if (category === 'finish2') {
+        if (propId === 'none') finishLayers = [];
+        else { var li = finishLayers.indexOf(propId); if (li >= 0) finishLayers.splice(li, 1); else finishLayers.push(propId); }
+        loadProps(); updateSummary();
         return;
     }
     // single-choice categories: pressing the active option again switches it off, like the decorations
@@ -3042,6 +3142,7 @@ function updateSummary() {
         var ids = [];
         if (cat.key === 'hat' || cat.key === 'glasses') ids = placed.filter(function(p) { return p.kind === cat.key; }).map(function(p) { return p.id; });
         else if (cat.key === 'effect') ids = effects.slice();
+        else if (cat.key === 'finish2') ids = finishLayers.slice();
         else if (selectedProps[cat.key] && selectedProps[cat.key] !== 'none') ids = [selectedProps[cat.key]];
         ids.forEach(function(id) {
             var it = meta(cat, id);
