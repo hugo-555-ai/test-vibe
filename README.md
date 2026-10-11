@@ -5,15 +5,16 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
 ## Características
 
 - **Cámara en vivo** con efecto espejo (volteado horizontalmente)
-- **5 fotos** por sesión en formato vertical
+- **4 fotos** por sesión en formato vertical
 - **Ratio 4:3** por foto en la tira descendible
 - **Temática divertida** con animaciones, emojis y elementos decorativos
-- **Sistema de accesorios** completo:
-  - Filtros (sepia, escala de grises, negativo, vintage, cálido, frío)
-  - Sombreros (vaquero, corona, Santa, fiesta, chef, pirata)
-  - Gafas (sol, nerd, corazones, estrellas)
-  - Fondos (playa, espacio, ciudad)
-  - Efectos (bokeh, destellos, corazones)
+- **Sistema de accesorios** con vista previa en directo (lo que ves es lo que se fotografía):
+  - Filtros (sepia, B/N, negativo, vintage, cálido, frío, suave)
+  - Sombreros (vaquero, corona, Santa, fiesta, chef, pirata, graduación)
+  - Gafas (sol, nerd, corazones, estrellas, 3D, monóculo, natación)
+  - Fondos (playa, espacio, ciudad, bosque, atardecer, fiesta, invierno): la persona se recorta en un óvalo sobre el escenario
+  - Efectos animados (bokeh, destellos, corazones, estrellas, burbujas, fuegos, glitch)
+- Los sombreros y gafas se colocan sobre la cara usando la API `FaceDetector` si el navegador la ofrece; si no, sobre una posición centrada
 - **Tiempos fijos**: 3 segundos de cuenta atrás inicial y 3 segundos entre fotos
 - **Descarga automática** de la tira de fotos en formato JPG
 - **Diseño Full HD** optimizado para 1920x1080
@@ -69,7 +70,7 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
 Puedes modificar las siguientes constantes en el código para personalizar la experiencia:
 
 ```javascript
-const PHOTO_COUNT = 5;           // Número de fotos por sesión
+const PHOTO_COUNT = 4;           // Número de fotos por sesión
 const TIME_BETWEEN_PHOTOS = 3;    // Segundos entre fotos
 const COUNTDOWN_TIME = 3;         // Segundos de cuenta atrás inicial
 ```
