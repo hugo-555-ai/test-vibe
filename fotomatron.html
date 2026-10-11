@@ -2440,8 +2440,8 @@ function stepWishi(now) {
             if (y > 0 && f[i - W] * 0.6 > v) v = f[i - W] * 0.6;
             if (y < H - 1 && f[i + W] * 0.6 > v) v = f[i + W] * 0.6;
             var cur = m[i];
-            if (v > 0.12) cur -= v * 3.5 * dt;               // wiping
-            cur += 0.03 * dt;                                // grime slowly creeps back
+            if (v > 0.2) cur -= v * 1.8 * dt;                // wiping: needs vigorous movement
+            cur += 0.05 * dt;                                // grime creeps back
             m[i] = cur < 0 ? 0 : (cur > 1 ? 1 : cur);
             sum += m[i];
         }
@@ -2455,34 +2455,36 @@ function buildGrimeTexture(w, h) {
     var x = c.getContext('2d');
     var rnd = mulberry32(20061), s = w / 1280, i;
     var g = x.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, '#7a6d57'); g.addColorStop(0.5, '#5f5340'); g.addColorStop(1, '#4b4132');
+    g.addColorStop(0, '#3e3526'); g.addColorStop(0.5, '#2b241a'); g.addColorStop(1, '#1b160f');
     x.fillStyle = g; x.fillRect(0, 0, w, h);
-    for (i = 0; i < 70; i++) {                               // big smudges
-        var bx = rnd() * w, by = rnd() * h, br = (40 + rnd() * 140) * s;
-        var dark = rnd() > 0.45;
+    for (i = 0; i < 130; i++) {                              // big smudges
+        var bx = rnd() * w, by = rnd() * h, br = (50 + rnd() * 170) * s;
+        var dark = rnd() > 0.3;
         var rg = x.createRadialGradient(bx, by, 0, bx, by, br);
-        rg.addColorStop(0, dark ? 'rgba(30,22,12,0.45)' : 'rgba(190,175,140,0.35)');
+        rg.addColorStop(0, dark ? 'rgba(8,5,2,0.7)' : 'rgba(110,95,66,0.38)');
         rg.addColorStop(1, 'rgba(0,0,0,0)');
         x.fillStyle = rg; x.fillRect(bx - br, by - br, br * 2, br * 2);
     }
+    x.fillStyle = 'rgba(22,17,10,0.45)';                     // an extra coat of mud so nothing shows through
+    x.fillRect(0, 0, w, h);
     x.lineCap = 'round';
-    for (i = 0; i < 45; i++) {                               // drips running down the glass
+    for (i = 0; i < 70; i++) {                               // drips running down the glass
         var dx = rnd() * w, dy = rnd() * h * 0.7, dl = (40 + rnd() * 220) * s;
-        x.strokeStyle = 'rgba(25,18,10,' + (0.15 + rnd() * 0.25) + ')';
+        x.strokeStyle = 'rgba(5,3,1,' + (0.3 + rnd() * 0.35) + ')';
         x.lineWidth = (2 + rnd() * 5) * s;
         x.beginPath(); x.moveTo(dx, dy); x.lineTo(dx + (rnd() - 0.5) * 10 * s, dy + dl); x.stroke();
     }
-    for (i = 0; i < 700; i++) {                              // speckles
-        x.fillStyle = rnd() > 0.5 ? 'rgba(20,15,8,0.5)' : 'rgba(210,200,170,0.35)';
+    for (i = 0; i < 1100; i++) {                             // speckles
+        x.fillStyle = rnd() > 0.35 ? 'rgba(8,5,2,0.6)' : 'rgba(150,135,100,0.3)';
         x.beginPath(); x.arc(rnd() * w, rnd() * h, (0.8 + rnd() * 3) * s, 0, Math.PI * 2); x.fill();
     }
     for (i = 0; i < 9; i++) {                                // fingerprints / smears
         var fx = rnd() * w, fy = rnd() * h;
-        x.strokeStyle = 'rgba(210,195,160,0.18)'; x.lineWidth = 3 * s;
+        x.strokeStyle = 'rgba(170,155,120,0.2)'; x.lineWidth = 3 * s;
         for (var r = 0; r < 5; r++) { x.beginPath(); x.ellipse(fx, fy, (14 + r * 9) * s, (20 + r * 11) * s, 0.4, 0, Math.PI * 2); x.stroke(); }
     }
     x.textAlign = 'center'; x.textBaseline = 'middle';       // the hint is part of the grime: it disappears when wiped
-    x.fillStyle = 'rgba(255,255,255,0.5)';
+    x.fillStyle = 'rgba(235,225,200,0.55)';
     x.font = '700 ' + Math.round(70 * s) + 'px "Fredoka", "Segoe UI", sans-serif';
     x.fillText('¡MUÉVETE PARA LIMPIAR!', w / 2, h * 0.46);
     x.font = Math.round(120 * s) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
@@ -2496,8 +2498,9 @@ function drawWishi(ctx, w, h) {
     // mask cells -> alpha (soft-stepped so edges look wiped rather than faded)
     var img = wishi.maskCtx.createImageData(MOTION_W, MOTION_H), d = img.data, m = wishi.mask;
     for (var i = 0; i < m.length; i++) {
-        var v = m[i];
-        d[i * 4 + 3] = Math.round(255 * v * v * (3 - 2 * v));
+        var a = (m[i] - 0.08) / 0.62;                        // fully opaque until ~30% wiped, clear at 100%
+        a = a < 0 ? 0 : (a > 1 ? 1 : a);
+        d[i * 4 + 3] = Math.round(255 * a * a * (3 - 2 * a));
     }
     wishi.maskCtx.putImageData(img, 0, 0);
     if (wishi.tmp.width !== w || wishi.tmp.height !== h) { wishi.tmp.width = w; wishi.tmp.height = h; }
