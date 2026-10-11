@@ -259,13 +259,24 @@
             color: white;
         }
 
-        /* Start Button - Center Bottom */
+        /* Start Button - Over Camera */
         .start-btn-container {
-            grid-area: start-btn;
+            grid-area: camera;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px 0;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .start-btn-container .btn {
+            pointer-events: auto;
+            width: 50%;
         }
 
         .btn {
@@ -337,6 +348,14 @@
         }
 
         /* Status */
+        .status-container {
+            grid-area: start-btn;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+
         .status-text {
             text-align: center;
             color: var(--accent);
@@ -524,6 +543,11 @@
         <div class="countdown-container">
             <div class="countdown-display" id="countdownDisplay"></div>
         </div>
+        <div class="start-btn-container">
+            <button class="btn" id="startBtn" onclick="startPhotoBooth()">
+                <span id="startBtnText">Empezar</span>
+            </button>
+        </div>
     </div>
 
     <div class="props-section">
@@ -538,10 +562,7 @@
         <div class="props-grid" id="propsGrid"></div>
     </div>
 
-    <div class="start-btn-container">
-        <button class="btn" id="startBtn" onclick="startPhotoBooth()">
-            <span id="startBtnText">Empezar</span>
-        </button>
+    <div class="status-container">
         <div class="status-text" id="statusText">Listo para empezar</div>
     </div>
 
@@ -1166,7 +1187,7 @@ function startPhotoBooth() {
     if (isSessionRunning) return;
     isSessionRunning = true; photos = []; currentPhotoIndex = 0;
     updateStatus('Preparate!');
-    document.getElementById('startBtn').disabled = true;
+    document.getElementById('startBtn').style.display = 'none';
     startInitialCountdown();
 }
 
@@ -1267,7 +1288,6 @@ function endPhotoSession() {
     if (countdownTimeout) clearTimeout(countdownTimeout);
     if (photoTimeout) clearTimeout(photoTimeout);
     if (betweenPhotosTimeout) clearTimeout(betweenPhotosTimeout);
-    document.getElementById('startBtn').disabled = false;
     updateStatus('Procesando fotos...');
     setTimeout(function() { downloadPhotoStrip(); }, 500);
 }
@@ -1278,7 +1298,7 @@ function stopPhotoBooth() {
     if (countdownTimeout) clearTimeout(countdownTimeout);
     if (photoTimeout) clearTimeout(photoTimeout);
     if (betweenPhotosTimeout) clearTimeout(betweenPhotosTimeout);
-    document.getElementById('startBtn').disabled = false; 
+    document.getElementById('startBtn').style.display = 'block';
     updateStatus('Sesion detenida');
 }
 
