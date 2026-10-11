@@ -11,12 +11,12 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
 - **Sistema de accesorios** con vista previa en directo (lo que ves es lo que se fotografía):
   - Filtros (sepia, B/N, negativo, vintage, cálido, frío, suave, Halloween)
   - Sombreros (vaquero, corona, Santa, fiesta, chef, pirata, graduación, bruja, calabaza, diablillo)
-  - Gafas (sol, nerd, corazones, estrellas, 3D, monóculo, natación, ojos rojos, ojos calabaza)
+  - Gafas (sol, nerd, corazones, estrellas, 3D, monóculo, natación, ojos rojos, ojos calabaza, barra negra y pixelado de privacidad)
   - Fondos (playa, espacio, ciudad, bosque, atardecer, fiesta, invierno, cementerio): la persona se recorta en un óvalo sobre el escenario
   - Efectos animados (bokeh, destellos, corazones, estrellas, burbujas, fuegos, glitch, murciélagos, fantasmas)
 - Los sombreros y gafas se colocan sobre la cara usando la API `FaceDetector` si el navegador la ofrece; si no, sobre una posición centrada
 - **Retos de pose**: antes de cada foto aparece un emoji (cara o gesto) con su nombre; el usuario lo imita y el emoji queda estampado en pequeño en la esquina inferior izquierda de esa foto
-- **Distorsiones** (pestaña propia, combinables con los filtros de color): ojo de pez, pellizco, torbellino, ondas, espejo, feria ancha, alargado y pixelado
+- **Distorsiones** (pestaña propia, combinables con los filtros de color): ojo de pez, pellizco, torbellino, ondas, espejo, feria ancha, alargado, pixelado, caleidoscopio, mosaico, agua, derretido y RGB. En las que tienen centro (ojo de pez, pellizco, torbellino, agua, caleidoscopio, feria, alargado, espejo, RGB) se arrastra el punto ◎ de la cámara para moverlo
 - **Varios accesorios a la vez**: cada pulsación en Sombreros o Gafas añade uno más (puedes repetir el mismo); los efectos se pueden combinar. Filtro, distorsión y fondo son de elección única
 - **Quitar accesorios**: lista "Accesorios puestos" con ✕ por accesorio, botones "Quitar este" / "Quitar todos", tecla Supr, y "Quitar todos" en cada pestaña
 - **Cada sombrero/gafa es independiente**: arrastra sobre la cámara para moverlo; tira de una esquina del cuadro, rueda del ratón, pellizco táctil o slider para el tamaño, flechas de desplazamiento y Restablecer

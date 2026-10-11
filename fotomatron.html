@@ -407,6 +407,27 @@
             text-align: center;
         }
 
+        .distort-controls {
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--panel-border);
+            font-size: 0.78em;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .distort-controls .btn.small {
+            width: 100%;
+            margin-top: 6px;
+            padding: 5px 10px;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+            text-transform: none;
+            box-shadow: none;
+        }
+
         .accessory-controls {
             margin-top: 10px;
             padding: 10px;
@@ -656,6 +677,10 @@
         <h2>Accesorios</h2>
         <div class="props-tabs" id="propsTabs"></div>
         <div class="props-grid" id="propsGrid"></div>
+        <div class="distort-controls" id="distortControls" style="display:none;">
+            <span>◎ Arrastra el punto de la cámara para mover el centro del efecto.</span>
+            <button class="btn secondary small" type="button" onclick="resetDistortCenter()">↺ Centrar</button>
+        </div>
         <div class="accessory-controls" id="accessoryControls" style="display:none;">
             <div class="placed-title">Accesorios puestos</div>
             <div class="placed-list" id="placedList"></div>
@@ -708,6 +733,8 @@ var effects = [];         // active effect ids (they can be combined)
 var dragState = null;
 var activePointers = {};
 var renderHQ = false;         // full-resolution distortion while capturing
+var distortCenter = { x: 0.5, y: 0.5 };   // centre of the distortion, as a fraction of the frame (draggable)
+var CENTER_DISTORTIONS = { bulge: 1, pinch: 1, swirl: 1, ripple: 1, kaleido: 1, wide: 1, tall: 1, mirror: 1, rgbsplit: 1 };
 var faceBox = null;           // detected face (canvas coordinates) or null -> heuristic
 var faceMisses = 0;
 var faceDetector = null;
@@ -735,7 +762,12 @@ var propCategories = [
         { id: 'mirror', name: 'Espejo', emoji: '🪞' },
         { id: 'wide', name: 'Feria ancha', emoji: '↔️' },
         { id: 'tall', name: 'Alargado', emoji: '↕️' },
-        { id: 'pixelate', name: 'Pixelado', emoji: '🔲' }
+        { id: 'pixelate', name: 'Pixelado', emoji: '🔲' },
+        { id: 'kaleido', name: 'Caleidoscopio', emoji: '🔯' },
+        { id: 'tile', name: 'Mosaico', emoji: '🧩' },
+        { id: 'ripple', name: 'Agua', emoji: '💧' },
+        { id: 'melt', name: 'Derretido', emoji: '🍦' },
+        { id: 'rgbsplit', name: 'RGB', emoji: '📺' }
     ]},
     { key: 'hat', label: 'Sombreros', icon: '🎩', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -760,7 +792,9 @@ var propCategories = [
         { id: 'monocle', name: 'Monóculo', emoji: '🧐' },
         { id: 'swim', name: 'Natación', emoji: '🥽' },
         { id: 'redeyes', name: 'Ojos rojos', emoji: '👹' },
-        { id: 'pumpkineyes', name: 'Ojos calabaza', emoji: '🎃' }
+        { id: 'pumpkineyes', name: 'Ojos calabaza', emoji: '🎃' },
+        { id: 'censor', name: 'Barra negra', emoji: '⬛' },
+        { id: 'pixel', name: 'Pixelado', emoji: '🔳' }
     ]},
     { key: 'background', label: 'Fondos', icon: '🖼️', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -820,6 +854,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProps();
     updateSummary();
     updateAccessoryControls();
+    updateDistortControls();
     setupAccessoryInteraction();
     initializeCamera();
     requestAnimationFrame(renderLoop);
@@ -945,7 +980,7 @@ function renderFrame(ctx, w, h, t, guides) {
     var face = getFace(w, h);
     drawPlaced(ctx, face);
     effects.forEach(function(id) { drawEffect(ctx, w, h, id, t); });
-    if (guides) drawGuides(ctx, face);
+    if (guides) { drawGuides(ctx, face); drawCenterMarker(ctx, w, h); }
 }
 
 // ===== Placed accessories: hats & glasses, as many as wanted, each with its own place/size =====
@@ -1024,6 +1059,42 @@ function drawPlaced(ctx, f) {
     });
 }
 
+function centerMarkerRadius() { return Math.max(22, previewCanvas.width * 0.022); }
+
+function drawCenterMarker(ctx, w, h) {
+    if (!CENTER_DISTORTIONS[selectedProps.distort]) return;
+    var x = w * distortCenter.x, y = h * distortCenter.y, r = centerMarkerRadius() * 0.6;
+    ctx.save();
+    ctx.lineWidth = Math.max(5, w * 0.005);
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    for (var pass = 0; pass < 2; pass++) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.moveTo(x - r * 1.6, y); ctx.lineTo(x + r * 1.6, y);
+        ctx.moveTo(x, y - r * 1.6); ctx.lineTo(x, y + r * 1.6);
+        ctx.stroke();
+        ctx.lineWidth = Math.max(2, w * 0.002);
+        ctx.strokeStyle = '#ffe66d';
+    }
+    ctx.restore();
+}
+
+function hitCenter(p) {
+    if (!CENTER_DISTORTIONS[selectedProps.distort]) return false;
+    var x = previewCanvas.width * distortCenter.x, y = previewCanvas.height * distortCenter.y;
+    return Math.hypot(p.x - x, p.y - y) <= centerMarkerRadius();
+}
+
+function resetDistortCenter() {
+    distortCenter.x = 0.5;
+    distortCenter.y = 0.5;
+}
+
+function updateDistortControls() {
+    var box = document.getElementById('distortControls');
+    if (box) box.style.display = CENTER_DISTORTIONS[selectedProps.distort] ? 'block' : 'none';
+}
+
 function drawGuides(ctx, f) {
     var item = getSelectedItem();
     if (!item) return;
@@ -1079,6 +1150,7 @@ function getAccessoryAnchor(item, f) {
 }
 
 function hoverCursor(p) {
+    if (hitCenter(p)) return 'grab';
     if (hitHandle(p)) return hitHandle(p).cursor;
     if (pickAccessory(p, true)) return 'grab';
     return getSelectedItem() ? 'move' : 'default';      // drag from anywhere moves the selected one
@@ -1154,6 +1226,13 @@ function setupAccessoryInteraction() {
             return;
         }
         var p = canvasPoint(ev);
+        if (hitCenter(p)) {                                                  // grab the distortion centre
+            dragState = { centerDrag: true };
+            try { c.setPointerCapture(ev.pointerId); } catch (e) { /* see below */ }
+            c.style.cursor = 'grabbing';
+            ev.preventDefault();
+            return;
+        }
         var hnd = hitHandle(p);
         if (hnd && sel) {                                                    // grab a corner: resize
             var anc = getAccessoryAnchor(sel, getFace(c.width, c.height));
@@ -1177,6 +1256,12 @@ function setupAccessoryInteraction() {
     c.addEventListener('pointermove', function(ev) {
         if (dragState && ev.pointerType === 'mouse' && ev.buttons === 0) { endPointer(ev); return; }   // lost the button-up
         if (activePointers[ev.pointerId]) activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        if (dragState && dragState.centerDrag) {
+            var pc = canvasPoint(ev);
+            distortCenter.x = Math.max(0.05, Math.min(0.95, pc.x / c.width));
+            distortCenter.y = Math.max(0.05, Math.min(0.95, pc.y / c.height));
+            return;
+        }
         var item = dragState ? findItem(dragState.uid) : null;
         if (dragState && dragState.pinch) {
             var ids = Object.keys(activePointers);
@@ -1306,17 +1391,36 @@ function applyDistortion(id, w, h, t) {
         vidCtx.imageSmoothingEnabled = true;
         return;
     }
-    var k = renderHQ ? 1 : 0.4;
+    var k = renderHQ ? 1 : (id === 'kaleido' ? 0.3 : 0.4);   // kaleidoscope is the costliest per pixel
     var sw = Math.round(w * k), sh = Math.round(h * k);
     if (distCanvas.width !== sw || distCanvas.height !== sh) { distCanvas.width = sw; distCanvas.height = sh; }
     distCtx.drawImage(vidCanvas, 0, 0, sw, sh);
     var sd = distCtx.getImageData(0, 0, sw, sh).data;
     var dst = distCtx.createImageData(sw, sh);
     var dd = dst.data;
-    var cx = sw / 2, cy = sh / 2;
+    var cx = sw * distortCenter.x, cy = sh * distortCenter.y;
     var R = Math.min(sw, sh) * 0.6;
     var phase = t * 0.004;
     var maxX = sw - 1.001, maxY = sh - 1.001;
+    if (id === 'rgbsplit') {          // radial chromatic aberration: red pulled in, blue pushed out
+        var e = 0.03, shift = sw * 0.008;
+        for (var yy = 0; yy < sh; yy++) {
+            for (var xx = 0; xx < sw; xx++) {
+                var oo = (yy * sw + xx) * 4;
+                var rx = Math.round(cx + (xx - cx) * (1 - e) + shift), ry = Math.round(cy + (yy - cy) * (1 - e));
+                var bx = Math.round(cx + (xx - cx) * (1 + e) - shift), by = Math.round(cy + (yy - cy) * (1 + e));
+                rx = rx < 0 ? 0 : (rx > sw - 1 ? sw - 1 : rx); ry = ry < 0 ? 0 : (ry > sh - 1 ? sh - 1 : ry);
+                bx = bx < 0 ? 0 : (bx > sw - 1 ? sw - 1 : bx); by = by < 0 ? 0 : (by > sh - 1 ? sh - 1 : by);
+                dd[oo] = sd[(ry * sw + rx) * 4];
+                dd[oo + 1] = sd[oo + 1];
+                dd[oo + 2] = sd[(by * sw + bx) * 4 + 2];
+                dd[oo + 3] = 255;
+            }
+        }
+        distCtx.putImageData(dst, 0, 0);
+        vidCtx.drawImage(distCanvas, 0, 0, sw, sh, 0, 0, w, h);
+        return;
+    }
     for (var y = 0; y < sh; y++) {
         for (var x = 0; x < sw; x++) {
             var sx = x, sy = y, dx = x - cx, dy = y - cy, r, a, c, s;
@@ -1337,6 +1441,28 @@ function applyDistortion(id, w, h, t) {
                         sx = cx + dx * c - dy * s; sy = cy + dx * s + dy * c;
                     }
                     break;
+                case 'ripple':
+                    r = Math.sqrt(dx * dx + dy * dy);
+                    if (r > 0.5) {
+                        a = Math.sin(r / R * Math.PI * 9 - phase * 3) * sw * 0.012 * (1 - Math.min(1, r / (R * 1.7)));
+                        sx = x + dx / r * a; sy = y + dy / r * a;
+                    }
+                    break;
+                case 'kaleido':
+                    r = Math.sqrt(dx * dx + dy * dy);
+                    a = Math.atan2(dy, dx) - phase * 0.12;        // slow rotation
+                    c = Math.PI / 4;                              // 8 segments
+                    a = a - Math.floor(a / (2 * c)) * 2 * c;      // into [0, 2c)
+                    if (a > c) a = 2 * c - a;                     // mirror every second segment
+                    sx = cx + Math.cos(a) * r; sy = cy + Math.sin(a) * r;
+                    break;
+                case 'tile':
+                    sx = (x * 2) % sw; sy = (y * 2) % sh;
+                    break;
+                case 'melt':
+                    sy = y - (y / sh) * sh * 0.22 * (0.5 + 0.5 * Math.sin(x / sw * Math.PI * 9 + phase * 0.6));
+                    sx = x + Math.sin(y / sh * Math.PI * 4 + phase * 0.5) * sw * 0.006;
+                    break;
                 case 'wave':
                     sx = x + Math.sin(y / sh * Math.PI * 6 + phase) * sw * 0.025;
                     break;
@@ -1344,10 +1470,10 @@ function applyDistortion(id, w, h, t) {
                     if (x > cx) sx = 2 * cx - x;
                     break;
                 case 'wide':
-                    sx = cx + dx * (0.55 + 0.9 * Math.abs(dy) / cy);
+                    sx = cx + dx * (0.55 + 0.9 * Math.abs(dy) / (sh / 2));
                     break;
                 case 'tall':
-                    sy = cy + dy * (0.55 + 0.9 * Math.abs(dx) / cx);
+                    sy = cy + dy * (0.55 + 0.9 * Math.abs(dx) / (sw / 2));
                     break;
             }
             if (sx < 0) sx = 0; else if (sx > maxX) sx = maxX;
@@ -1729,6 +1855,14 @@ function drawGlasses(ctx, f, id, item) {
             ctx.beginPath(); ctx.moveTo(cxR + r * 0.7, ey + r * 0.8);
             ctx.bezierCurveTo(cxR + r * 1.3, ey + r * 2, cxR + r * 0.4, ey + r * 3.2, cxR + r * 1.2, ey + r * 4.2); ctx.stroke();
             break;
+        case 'censor':
+            ctx.fillStyle = '#000';
+            roundRect(ctx, f.cx - 0.58 * u, ey - 0.13 * u, 1.16 * u, 0.26 * u, 0.03 * u);
+            ctx.fill();
+            break;
+        case 'pixel':
+            drawPixelPrivacy(ctx, f, gt, u);
+            break;
         case 'redeyes':
             [cxL, cxR].forEach(function(ex2) {
                 var gl = ctx.createRadialGradient(ex2, ey, 0, ex2, ey, r * 1.5);
@@ -1769,6 +1903,31 @@ function drawGlasses(ctx, f, id, item) {
             ctx.beginPath(); ctx.moveTo(cxL + r * 1.1, ey); ctx.lineTo(cxR - r * 1.1, ey); ctx.stroke();
             break;
     }
+    ctx.restore();
+}
+
+// Pixelates whatever is already drawn under the glasses band (privacy mosaic). Works in absolute canvas coordinates.
+var pixCanvas = document.createElement('canvas');
+function drawPixelPrivacy(ctx, f, item, u) {
+    var s = item.scale;
+    var cx = f.cx + item.dx * u, cy = f.eyeY + item.dy * u;
+    var hw = 0.58 * u * s, hh = 0.17 * u * s;
+    var cw = ctx.canvas.width, ch = ctx.canvas.height;
+    var x0 = Math.max(0, Math.floor(cx - hw)), y0 = Math.max(0, Math.floor(cy - hh));
+    var x1 = Math.min(cw, Math.ceil(cx + hw)), y1 = Math.min(ch, Math.ceil(cy + hh));
+    var rw = x1 - x0, rh = y1 - y0;
+    if (rw < 2 || rh < 2) return;
+    var cell = Math.max(4, u * 0.075 * s);
+    var sw = Math.max(1, Math.round(rw / cell)), sh = Math.max(1, Math.round(rh / cell));
+    pixCanvas.width = sw; pixCanvas.height = sh;
+    var pc = pixCanvas.getContext('2d');
+    pc.imageSmoothingEnabled = true;
+    pc.imageSmoothingQuality = 'high';
+    pc.drawImage(ctx.canvas, x0, y0, rw, rh, 0, 0, sw, sh);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(pixCanvas, 0, 0, sw, sh, x0, y0, rw, rh);
     ctx.restore();
 }
 
@@ -2231,6 +2390,7 @@ function selectProp(propId, category) {
     selectedProps[category] = propId;
     loadProps();
     updateSummary();
+    updateDistortControls();
 }
 
 function updateSummary() {
