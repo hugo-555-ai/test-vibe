@@ -672,7 +672,7 @@
                 <button class="btn secondary small danger" type="button" onclick="removeSelected()">🗑 Quitar este</button>
                 <button class="btn secondary small danger" type="button" onclick="clearAccessories()">Quitar todos</button>
             </div>
-            <p class="hint">Pulsa varios accesorios para ponerlos a la vez. Arrastra sobre la cámara para moverlo (o usa las flechas); rueda o pellizco para el tamaño; Supr para quitarlo.</p>
+            <p class="hint">Pulsa varios accesorios para ponerlos a la vez. Arrastra sobre la cámara para moverlo (o usa las flechas); tira de una esquina, rueda o pellizco para el tamaño; Supr para quitarlo.</p>
         </div>
         <div class="props-summary" id="propsSummary"></div>
     </div>
@@ -1034,10 +1034,54 @@ function drawGuides(ctx, f) {
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
     ctx.setLineDash([]);
-    ctx.fillStyle = '#ffe66d';
-    var hs = Math.max(8, previewCanvas.width * 0.01);
-    ctx.fillRect(b.x1 - hs / 2, b.y1 - hs / 2, hs, hs);
+    var hs = handleSize();
+    ctx.lineWidth = Math.max(2, previewCanvas.width * 0.002);
+    getHandles(item, f).forEach(function(hd) {
+        ctx.fillStyle = '#ffe66d';
+        ctx.strokeStyle = '#14142b';
+        ctx.fillRect(hd.x - hs / 2, hd.y - hs / 2, hs, hs);
+        ctx.strokeRect(hd.x - hs / 2, hd.y - hs / 2, hs, hs);
+    });
     ctx.restore();
+}
+
+// Resize handles: the four corners of the selected accessory's box.
+function handleSize() { return Math.max(14, previewCanvas.width * 0.014); }
+
+function getHandles(item, f) {
+    var b = getAccessoryBox(item, f);
+    return [
+        { x: b.x0, y: b.y0, cursor: 'nwse-resize' },
+        { x: b.x1, y: b.y0, cursor: 'nesw-resize' },
+        { x: b.x0, y: b.y1, cursor: 'nesw-resize' },
+        { x: b.x1, y: b.y1, cursor: 'nwse-resize' }
+    ];
+}
+
+function hitHandle(p) {
+    var item = getSelectedItem();
+    if (!item) return null;
+    var f = getFace(previewCanvas.width, previewCanvas.height);
+    var r = handleSize() * 1.1;
+    var hs = getHandles(item, f);
+    for (var i = 0; i < hs.length; i++) {
+        if (Math.abs(p.x - hs[i].x) <= r && Math.abs(p.y - hs[i].y) <= r) return hs[i];
+    }
+    return null;
+}
+
+// Point the accessory scales around (the spot it is anchored to on the head).
+function getAccessoryAnchor(item, f) {
+    var u = f.w;
+    return item.kind === 'hat'
+        ? { x: f.cx + item.dx * u, y: f.top + f.h * 0.12 + item.dy * u }
+        : { x: f.cx + item.dx * u, y: f.eyeY + item.dy * u };
+}
+
+function hoverCursor(p) {
+    if (hitHandle(p)) return hitHandle(p).cursor;
+    if (pickAccessory(p, true)) return 'grab';
+    return getSelectedItem() ? 'move' : 'default';      // drag from anywhere moves the selected one
 }
 
 function canvasPoint(ev) {
@@ -1110,6 +1154,16 @@ function setupAccessoryInteraction() {
             return;
         }
         var p = canvasPoint(ev);
+        var hnd = hitHandle(p);
+        if (hnd && sel) {                                                    // grab a corner: resize
+            var anc = getAccessoryAnchor(sel, getFace(c.width, c.height));
+            dragState = { uid: sel.uid, resize: true, anchor: anc, cursor: hnd.cursor,
+                          startDist: Math.max(10, Math.hypot(p.x - anc.x, p.y - anc.y)), startScale: sel.scale };
+            try { c.setPointerCapture(ev.pointerId); } catch (e) { /* see below */ }
+            c.style.cursor = hnd.cursor;
+            ev.preventDefault();
+            return;
+        }
         var item = chooseDragTarget(p);
         if (!item) return;
         var f = getFace(c.width, c.height);
@@ -1132,19 +1186,23 @@ function setupAccessoryInteraction() {
             }
             return;
         }
-        if (dragState && item) {
+        if (dragState && dragState.resize && item) {
+            var pr = canvasPoint(ev);
+            var ratio = Math.hypot(pr.x - dragState.anchor.x, pr.y - dragState.anchor.y) / dragState.startDist;
+            setAccessoryScale(item, dragState.startScale * ratio);
+        } else if (dragState && item) {
             var p = canvasPoint(ev);
             item.dx = dragState.startDx + (p.x - dragState.startX) / dragState.u;
             item.dy = dragState.startDy + (p.y - dragState.startY) / dragState.u;
         } else if (ev.pointerType === 'mouse') {
-            c.style.cursor = pickAccessory(canvasPoint(ev), false) ? 'grab' : 'default';
+            c.style.cursor = hoverCursor(canvasPoint(ev));
         }
     });
 
     function endPointer(ev) {
         delete activePointers[ev.pointerId];
         if (dragState && (!dragState.pinch || Object.keys(activePointers).length < 2)) dragState = null;
-        c.style.cursor = 'default';
+        c.style.cursor = (ev.target === c && ev.clientX !== undefined) ? hoverCursor(canvasPoint(ev)) : 'default';
     }
     c.addEventListener('pointerup', endPointer);
     c.addEventListener('pointercancel', endPointer);

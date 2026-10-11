@@ -19,7 +19,7 @@ Una aplicación web completa que simula un fotomatón clásico con acceso a la c
 - **Distorsiones** (pestaña propia, combinables con los filtros de color): ojo de pez, pellizco, torbellino, ondas, espejo, feria ancha, alargado y pixelado
 - **Varios accesorios a la vez**: cada pulsación en Sombreros o Gafas añade uno más (puedes repetir el mismo); los efectos se pueden combinar. Filtro, distorsión y fondo son de elección única
 - **Quitar accesorios**: lista "Accesorios puestos" con ✕ por accesorio, botones "Quitar este" / "Quitar todos", tecla Supr, y "Quitar todos" en cada pestaña
-- **Cada sombrero/gafa es independiente**: arrastra sobre la cámara para moverlo, rueda del ratón, pellizco táctil o slider para el tamaño, flechas de desplazamiento y Restablecer
+- **Cada sombrero/gafa es independiente**: arrastra sobre la cámara para moverlo; tira de una esquina del cuadro, rueda del ratón, pellizco táctil o slider para el tamaño, flechas de desplazamiento y Restablecer
 - **Tiempos fijos**: 3 segundos de cuenta atrás inicial y 3 segundos entre fotos
 - **Descarga automática** de la tira de fotos en formato JPG
 - **Diseño Full HD** optimizado para 1920x1080
