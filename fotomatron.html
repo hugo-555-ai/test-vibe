@@ -2818,7 +2818,8 @@ function loadProps() {
         var item = document.createElement('button');
         item.type = 'button';
         item.className = 'prop-item' + (on && !isNone ? ' selected' : '') + (isNone && !multi && on ? ' selected' : '');
-        item.title = multi && !isNone ? (cat.key === 'effect' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)') : label;
+        item.title = multi && !isNone ? (cat.key === 'effect' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)')
+            : (!multi && !isNone ? 'Pulsa de nuevo para quitarlo' : label);
         item.innerHTML = '<span class="prop-emoji">' + prop.emoji + '</span><span class="prop-name">' + label + '</span>' +
             (count > 0 ? '<span class="prop-count">×' + count + '</span>' : '');
         item.onclick = function() { selectProp(prop.id, cat.key); };
@@ -2835,6 +2836,8 @@ function selectProp(propId, category) {
         if (propId === 'none') { effects = []; loadProps(); updateSummary(); } else toggleEffect(propId);
         return;
     }
+    // single-choice categories: pressing the active option again switches it off, like the decorations
+    if (propId !== 'none' && selectedProps[category] === propId) propId = 'none';
     if (category === 'background' && propId === 'wishi') resetWishi();     // always start dirty
     selectedProps[category] = propId;
     loadProps();
