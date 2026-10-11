@@ -413,6 +413,8 @@
             border-radius: 12px;
             background: rgba(0, 0, 0, 0.25);
             border: 1px solid var(--panel-border);
+            max-height: 52%;
+            overflow-y: auto;
         }
 
         .accessory-controls label {
@@ -438,13 +440,71 @@
             box-shadow: none;
         }
 
+        .placed-title {
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--accent);
+        }
+
+        .placed-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: stretch;
+            border: 2px solid var(--panel-border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chip.selected {
+            border-color: var(--accent);
+            background: rgba(255, 230, 109, 0.18);
+        }
+
+        .chip button {
+            border: none;
+            background: transparent;
+            color: var(--light);
+            font-family: inherit;
+            font-size: 0.78em;
+            font-weight: 600;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .chip .chip-remove { border-left: 1px solid var(--panel-border); }
+        .chip .chip-remove:hover { background: var(--primary); color: #fff; }
+
+        .remove-row { display: flex; gap: 6px; }
+        .remove-row .btn { margin-top: 6px; }
+        .btn.danger:hover:not(:disabled) { background: rgba(255, 107, 107, 0.25); box-shadow: none; }
+
+        .prop-item { position: relative; }
+
+        .prop-count {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            font-size: 0.72em;
+            font-weight: 700;
+            color: var(--dark);
+            background: var(--accent);
+            border-radius: 10px;
+            padding: 0 6px;
+        }
+
         .dpad {
             display: grid;
-            grid-template-columns: repeat(3, 40px);
-            grid-template-areas: ". up ." "left . right" ". down .";
-            gap: 4px;
-            justify-content: center;
-            margin: 10px 0 4px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin: 8px 0 2px;
         }
 
         .dpad button {
@@ -460,10 +520,6 @@
         }
 
         .dpad button:active { background: var(--secondary); color: var(--dark); }
-        .dpad-up { grid-area: up; }
-        .dpad-left { grid-area: left; }
-        .dpad-right { grid-area: right; }
-        .dpad-down { grid-area: down; }
 
         .camera-container, #previewCanvas { user-select: none; -webkit-user-select: none; }
 
@@ -601,16 +657,22 @@
         <div class="props-tabs" id="propsTabs"></div>
         <div class="props-grid" id="propsGrid"></div>
         <div class="accessory-controls" id="accessoryControls" style="display:none;">
+            <div class="placed-title">Accesorios puestos</div>
+            <div class="placed-list" id="placedList"></div>
             <label for="sizeSlider"><span id="sizeLabel">Tamaño</span> <span id="sizeValue">100%</span></label>
             <input type="range" id="sizeSlider" min="0.4" max="2.5" step="0.05" value="1" oninput="onSizeSlider(this.value)">
             <div class="dpad" aria-label="Mover accesorio">
-                <button type="button" class="dpad-up" onpointerdown="startNudge(0,-0.03)" title="Subir">▲</button>
                 <button type="button" class="dpad-left" onpointerdown="startNudge(-0.03,0)" title="Izquierda">◀</button>
-                <button type="button" class="dpad-right" onpointerdown="startNudge(0.03,0)" title="Derecha">▶</button>
+                <button type="button" class="dpad-up" onpointerdown="startNudge(0,-0.03)" title="Subir">▲</button>
                 <button type="button" class="dpad-down" onpointerdown="startNudge(0,0.03)" title="Bajar">▼</button>
+                <button type="button" class="dpad-right" onpointerdown="startNudge(0.03,0)" title="Derecha">▶</button>
             </div>
             <button class="btn secondary small" type="button" onclick="resetAccessory()">↺ Restablecer</button>
-            <p class="hint">Arrastra sobre la cámara para moverlo (o usa las flechas). Rueda del ratón o pellizco para cambiar el tamaño.</p>
+            <div class="remove-row">
+                <button class="btn secondary small danger" type="button" onclick="removeSelected()">🗑 Quitar este</button>
+                <button class="btn secondary small danger" type="button" onclick="clearAccessories()">Quitar todos</button>
+            </div>
+            <p class="hint">Pulsa varios accesorios para ponerlos a la vez. Arrastra sobre la cámara para moverlo (o usa las flechas); rueda o pellizco para el tamaño; Supr para quitarlo.</p>
         </div>
         <div class="props-summary" id="propsSummary"></div>
     </div>
@@ -638,10 +700,11 @@ var currentPhotoIndex = 0;
 var isSessionRunning = false;
 var sessionTimers = [];
 var currentPropTab = 'filter';
-var selectedProps = { filter: 'none', distort: 'none', hat: 'none', glasses: 'none', background: 'none', effect: 'none' };
-// Hat/glasses placement relative to the face: dx/dy in face-widths, scale multiplier.
-var accessoryTransform = { hat: { dx: 0, dy: 0, scale: 1 }, glasses: { dx: 0, dy: 0, scale: 1 } };
-var activeAccessory = null;   // 'hat' | 'glasses': target of wheel/slider
+var selectedProps = { filter: 'none', distort: 'none', background: 'none' };   // single-choice categories
+var placed = [];          // hats & glasses worn: { uid, kind, id, dx, dy, scale } (dx/dy in face-widths)
+var nextUid = 1;
+var selectedUid = null;   // accessory targeted by drag / wheel / slider
+var effects = [];         // active effect ids (they can be combined)
 var dragState = null;
 var activePointers = {};
 var renderHQ = false;         // full-resolution distortion while capturing
@@ -880,41 +943,101 @@ function renderFrame(ctx, w, h, t, guides) {
     }
 
     var face = getFace(w, h);
-    if (selectedProps.hat !== 'none') drawHat(ctx, face, selectedProps.hat);
-    if (selectedProps.glasses !== 'none') drawGlasses(ctx, face, selectedProps.glasses);
-    if (selectedProps.effect !== 'none') drawEffect(ctx, w, h, selectedProps.effect, t);
+    drawPlaced(ctx, face);
+    effects.forEach(function(id) { drawEffect(ctx, w, h, id, t); });
     if (guides) drawGuides(ctx, face);
 }
 
+// ===== Placed accessories: hats & glasses, as many as wanted, each with its own place/size =====
+function findItem(uid) {
+    for (var i = 0; i < placed.length; i++) if (placed[i].uid === uid) return placed[i];
+    return null;
+}
+
+function getSelectedItem() { return findItem(selectedUid); }
+
+function itemMeta(item) {
+    var cat = getCategory(item.kind);
+    for (var i = 0; i < cat.items.length; i++) if (cat.items[i].id === item.id) return cat.items[i];
+    return { name: item.id, emoji: '•' };
+}
+
+function refreshAccessoryUI() {
+    loadProps();
+    updateSummary();
+    updateAccessoryControls();
+}
+
+function addAccessory(kind, id) {
+    var same = placed.filter(function(p) { return p.kind === kind; }).length;
+    var spread = [0, 0.45, -0.45, 0.9, -0.9];            // so repeated accessories don't sit exactly on top of each other
+    var item = { uid: nextUid++, kind: kind, id: id, dx: spread[same % spread.length], dy: 0, scale: 1 };
+    placed.push(item);
+    selectedUid = item.uid;
+    refreshAccessoryUI();
+}
+
+function fixSelection() {
+    if (!findItem(selectedUid)) selectedUid = placed.length ? placed[placed.length - 1].uid : null;
+}
+
+function removeAccessory(uid) {
+    placed = placed.filter(function(p) { return p.uid !== uid; });
+    fixSelection();
+    refreshAccessoryUI();
+}
+
+function clearAccessories(kind) {
+    placed = kind ? placed.filter(function(p) { return p.kind !== kind; }) : [];
+    fixSelection();
+    refreshAccessoryUI();
+}
+
+function removeSelected() {
+    if (selectedUid !== null) removeAccessory(selectedUid);
+}
+
+function toggleEffect(id) {
+    var i = effects.indexOf(id);
+    if (i >= 0) effects.splice(i, 1); else effects.push(id);
+    loadProps();
+    updateSummary();
+}
+
 // ===== Move / resize hats & glasses =====
-function getAccessoryBox(cat, f) {
-    var tr = accessoryTransform[cat], u = f.w, s = tr.scale;
-    if (cat === 'hat') {
-        var y0 = f.top + f.h * 0.12 + tr.dy * u;
-        var cx = f.cx + tr.dx * u;
+function getAccessoryBox(item, f) {
+    var u = f.w, s = item.scale;
+    if (item.kind === 'hat') {
+        var y0 = f.top + f.h * 0.12 + item.dy * u;
+        var cx = f.cx + item.dx * u;
         return { x0: cx - 0.62 * u * s, x1: cx + 0.62 * u * s, y0: y0 - 0.8 * u * s, y1: y0 + 0.12 * u * s };
     }
-    var ey = f.eyeY + tr.dy * u;
-    var gx = f.cx + tr.dx * u;
+    var ey = f.eyeY + item.dy * u;
+    var gx = f.cx + item.dx * u;
     return { x0: gx - 0.62 * u * s, x1: gx + 0.62 * u * s, y0: ey - 0.27 * u * s, y1: ey + 0.27 * u * s };
 }
 
-function drawGuides(ctx, f) {
-    ['hat', 'glasses'].forEach(function(cat) {
-        if (selectedProps[cat] === 'none') return;
-        if (cat !== currentPropTab && !(dragState && dragState.cat === cat)) return;
-        var b = getAccessoryBox(cat, f);
-        ctx.save();
-        ctx.setLineDash([10, 8]);
-        ctx.lineWidth = Math.max(2, previewCanvas.width * 0.003);
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-        ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
-        ctx.setLineDash([]);
-        ctx.fillStyle = '#ffe66d';
-        var hs = Math.max(8, previewCanvas.width * 0.01);
-        ctx.fillRect(b.x1 - hs / 2, b.y1 - hs / 2, hs, hs);
-        ctx.restore();
+function drawPlaced(ctx, f) {
+    placed.forEach(function(item) {
+        if (item.kind === 'hat') drawHat(ctx, f, item.id, item);
+        else drawGlasses(ctx, f, item.id, item);
     });
+}
+
+function drawGuides(ctx, f) {
+    var item = getSelectedItem();
+    if (!item) return;
+    var b = getAccessoryBox(item, f);
+    ctx.save();
+    ctx.setLineDash([10, 8]);
+    ctx.lineWidth = Math.max(2, previewCanvas.width * 0.003);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffe66d';
+    var hs = Math.max(8, previewCanvas.width * 0.01);
+    ctx.fillRect(b.x1 - hs / 2, b.y1 - hs / 2, hs, hs);
+    ctx.restore();
 }
 
 function canvasPoint(ev) {
@@ -925,36 +1048,34 @@ function canvasPoint(ev) {
     return { x: (ev.clientX - rect.left - offX) / scale, y: (ev.clientY - rect.top - offY) / scale };
 }
 
-// Which accessory is under point p. "generous" widens the hit area for easier grabbing.
+// Accessory under point p (nearest centre wins). "generous" widens the hit area for easier grabbing.
 function pickAccessory(p, generous) {
     var f = getFace(previewCanvas.width, previewCanvas.height);
     var pad = generous ? f.w * 0.2 : 0;
     var best = null, bestDist = Infinity;
-    ['glasses', 'hat'].forEach(function(cat) {      // glasses first: they sit on top of the hat
-        if (selectedProps[cat] === 'none') return;
-        var b = getAccessoryBox(cat, f);
+    placed.forEach(function(item) {
+        var b = getAccessoryBox(item, f);
         if (p.x < b.x0 - pad || p.x > b.x1 + pad || p.y < b.y0 - pad || p.y > b.y1 + pad) return;
         var d = Math.abs(p.x - (b.x0 + b.x1) / 2) + Math.abs(p.y - (b.y0 + b.y1) / 2);
-        if (d < bestDist) { bestDist = d; best = cat; }
+        if (d <= bestDist) { bestDist = d; best = item; }       // ties: the one drawn last (on top)
     });
     return best;
 }
 
-// Drag target: the accessory under the pointer, else the one whose tab is open, else the only one worn.
+// Drag target: the accessory under the pointer, else the selected one, else the only one placed.
 function chooseDragTarget(p) {
     var hit = pickAccessory(p, true);
     if (hit) return hit;
-    if ((currentPropTab === 'hat' || currentPropTab === 'glasses') && selectedProps[currentPropTab] !== 'none') return currentPropTab;
-    var worn = ['glasses', 'hat'].filter(function(c) { return selectedProps[c] !== 'none'; });
-    return worn.length === 1 ? worn[0] : null;
+    var sel = getSelectedItem();
+    if (sel) return sel;
+    return placed.length === 1 ? placed[0] : null;
 }
 
 function nudgeAccessory(ddx, ddy) {
-    var cat = currentPropTab;
-    if (cat !== 'hat' && cat !== 'glasses') return;
-    activeAccessory = cat;
-    accessoryTransform[cat].dx += ddx;
-    accessoryTransform[cat].dy += ddy;
+    var item = getSelectedItem();
+    if (!item) return;
+    item.dx += ddx;
+    item.dy += ddy;
 }
 
 var nudgeTimer = null;
@@ -969,9 +1090,9 @@ function stopNudge() {
 window.addEventListener('pointerup', stopNudge);
 window.addEventListener('blur', stopNudge);
 
-function setAccessoryScale(cat, s) {
-    accessoryTransform[cat].scale = Math.max(0.4, Math.min(2.5, s));
-    updateAccessoryControls();
+function setAccessoryScale(item, s) {
+    item.scale = Math.max(0.4, Math.min(2.5, s));
+    syncSizeControl();
 }
 
 function setupAccessoryInteraction() {
@@ -979,43 +1100,44 @@ function setupAccessoryInteraction() {
     c.style.touchAction = 'none';
 
     c.addEventListener('pointerdown', function(ev) {
-        activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
         if (ev.pointerType === 'mouse') activePointers = {};   // a mouse is a single pointer: drop stale entries
         activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
         var ids = Object.keys(activePointers);
-        if (ids.length === 2 && activeAccessory && ev.pointerType !== 'mouse') {   // pinch to resize
+        var sel = getSelectedItem();
+        if (ids.length === 2 && sel && ev.pointerType !== 'mouse') {          // pinch to resize
             var a = activePointers[ids[0]], b = activePointers[ids[1]];
-            dragState = { cat: activeAccessory, pinch: true, startDist: Math.hypot(a.x - b.x, a.y - b.y), startScale: accessoryTransform[activeAccessory].scale };
+            dragState = { uid: sel.uid, pinch: true, startDist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), startScale: sel.scale };
             return;
         }
-        var cat = chooseDragTarget(canvasPoint(ev));
-        if (!cat) return;
-        activeAccessory = cat;
-        var p = canvasPoint(ev), f = getFace(c.width, c.height), tr = accessoryTransform[cat];
-        dragState = { cat: cat, startX: p.x, startY: p.y, startDx: tr.dx, startDy: tr.dy, u: f.w };
-        try { c.setPointerCapture(ev.pointerId); } catch (e) { /* not fatal: window listeners below still end the drag */ }
+        var p = canvasPoint(ev);
+        var item = chooseDragTarget(p);
+        if (!item) return;
+        var f = getFace(c.width, c.height);
+        dragState = { uid: item.uid, startX: p.x, startY: p.y, startDx: item.dx, startDy: item.dy, u: f.w };
+        try { c.setPointerCapture(ev.pointerId); } catch (e) { /* not fatal: window listeners still end the drag */ }
         c.style.cursor = 'grabbing';
-        if (currentPropTab !== cat) switchPropTab(cat);
+        if (selectedUid !== item.uid) { selectedUid = item.uid; updateAccessoryControls(); }
         ev.preventDefault();
     });
 
     c.addEventListener('pointermove', function(ev) {
         if (dragState && ev.pointerType === 'mouse' && ev.buttons === 0) { endPointer(ev); return; }   // lost the button-up
         if (activePointers[ev.pointerId]) activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        var item = dragState ? findItem(dragState.uid) : null;
         if (dragState && dragState.pinch) {
             var ids = Object.keys(activePointers);
-            if (ids.length >= 2) {
+            if (item && ids.length >= 2) {
                 var a = activePointers[ids[0]], b = activePointers[ids[1]];
-                setAccessoryScale(dragState.cat, dragState.startScale * Math.hypot(a.x - b.x, a.y - b.y) / dragState.startDist);
+                setAccessoryScale(item, dragState.startScale * Math.hypot(a.x - b.x, a.y - b.y) / dragState.startDist);
             }
             return;
         }
-        if (dragState) {
-            var p = canvasPoint(ev), tr = accessoryTransform[dragState.cat];
-            tr.dx = dragState.startDx + (p.x - dragState.startX) / dragState.u;
-            tr.dy = dragState.startDy + (p.y - dragState.startY) / dragState.u;
+        if (dragState && item) {
+            var p = canvasPoint(ev);
+            item.dx = dragState.startDx + (p.x - dragState.startX) / dragState.u;
+            item.dy = dragState.startDy + (p.y - dragState.startY) / dragState.u;
         } else if (ev.pointerType === 'mouse') {
-            c.style.cursor = pickAccessory(canvasPoint(ev)) ? 'grab' : 'default';
+            c.style.cursor = pickAccessory(canvasPoint(ev), false) ? 'grab' : 'default';
         }
     });
 
@@ -1030,37 +1152,74 @@ function setupAccessoryInteraction() {
     window.addEventListener('pointercancel', endPointer);
 
     c.addEventListener('wheel', function(ev) {
-        var cat = pickAccessory(canvasPoint(ev)) || (activeAccessory && selectedProps[activeAccessory] !== 'none' ? activeAccessory : null);
-        if (!cat) return;
+        var item = pickAccessory(canvasPoint(ev), true) || getSelectedItem();
+        if (!item) return;
         ev.preventDefault();
-        activeAccessory = cat;
-        setAccessoryScale(cat, accessoryTransform[cat].scale * Math.exp(-ev.deltaY * 0.0015));
+        if (selectedUid !== item.uid) { selectedUid = item.uid; updateAccessoryControls(); }
+        setAccessoryScale(item, item.scale * Math.exp(-ev.deltaY * 0.0015));
     }, { passive: false });
+
+    document.addEventListener('keydown', function(ev) {
+        var tag = ev.target && ev.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if ((ev.key === 'Delete' || ev.key === 'Backspace') && selectedUid !== null) {
+            ev.preventDefault();
+            removeSelected();
+        }
+    });
+}
+
+function renderPlacedList() {
+    var box = document.getElementById('placedList');
+    box.innerHTML = '';
+    placed.forEach(function(item) {
+        var m = itemMeta(item);
+        var chip = document.createElement('div');
+        chip.className = 'chip' + (item.uid === selectedUid ? ' selected' : '');
+        var main = document.createElement('button');
+        main.type = 'button';
+        main.className = 'chip-main';
+        main.textContent = m.emoji + ' ' + m.name;
+        main.title = 'Seleccionar para mover o cambiar el tamaño';
+        main.onclick = function() { selectedUid = item.uid; updateAccessoryControls(); };
+        var rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'chip-remove';
+        rm.textContent = '✕';
+        rm.title = 'Quitar ' + m.name;
+        rm.onclick = function() { removeAccessory(item.uid); };
+        chip.appendChild(main);
+        chip.appendChild(rm);
+        box.appendChild(chip);
+    });
+}
+
+function syncSizeControl() {
+    var item = getSelectedItem();
+    if (!item) return;
+    document.getElementById('sizeLabel').textContent = 'Tamaño: ' + itemMeta(item).name;
+    document.getElementById('sizeSlider').value = item.scale;
+    document.getElementById('sizeValue').textContent = Math.round(item.scale * 100) + '%';
 }
 
 function updateAccessoryControls() {
     var box = document.getElementById('accessoryControls');
-    var cat = currentPropTab;
-    var show = (cat === 'hat' || cat === 'glasses');
-    box.style.display = show ? 'block' : 'none';
-    if (!show) return;
-    document.getElementById('sizeLabel').textContent = cat === 'hat' ? 'Tamaño del sombrero' : 'Tamaño de las gafas';
-    document.getElementById('sizeSlider').value = accessoryTransform[cat].scale;
-    document.getElementById('sizeValue').textContent = Math.round(accessoryTransform[cat].scale * 100) + '%';
+    box.style.display = placed.length ? 'block' : 'none';
+    if (!placed.length) return;
+    renderPlacedList();
+    syncSizeControl();
 }
 
 function onSizeSlider(v) {
-    var cat = currentPropTab;
-    if (cat !== 'hat' && cat !== 'glasses') return;
-    activeAccessory = cat;
-    setAccessoryScale(cat, parseFloat(v));
+    var item = getSelectedItem();
+    if (item) setAccessoryScale(item, parseFloat(v));
 }
 
 function resetAccessory() {
-    var cat = currentPropTab;
-    if (cat !== 'hat' && cat !== 'glasses') return;
-    accessoryTransform[cat] = { dx: 0, dy: 0, scale: 1 };
-    updateAccessoryControls();
+    var item = getSelectedItem();
+    if (!item) return;
+    item.dx = 0; item.dy = 0; item.scale = 1;
+    syncSizeControl();
 }
 
 // ===== Video layer + filters =====
@@ -1230,11 +1389,11 @@ function softBlurFallback(ctx, w, h) {
 }
 
 // ===== Hats =====
-function drawHat(ctx, f, id) {
+function drawHat(ctx, f, id, item) {
     var u = f.w;
     var cx = f.cx;
     var y0 = f.top + f.h * 0.12;     // line where the hat sits on the head
-    var tr = accessoryTransform.hat;
+    var tr = item || { dx: 0, dy: 0, scale: 1 };
     ctx.save();
     ctx.translate(cx + tr.dx * u, y0 + tr.dy * u);
     ctx.scale(tr.scale, tr.scale);
@@ -1447,13 +1606,13 @@ function drawHat(ctx, f, id) {
 }
 
 // ===== Glasses =====
-function drawGlasses(ctx, f, id) {
+function drawGlasses(ctx, f, id, item) {
     var u = f.w;
     var ex = 0.23 * u;            // horizontal eye offset
     var ey = f.eyeY;
     var cxL = f.cx - ex, cxR = f.cx + ex;
     var r = 0.17 * u;
-    var gt = accessoryTransform.glasses;
+    var gt = item || { dx: 0, dy: 0, scale: 1 };
     ctx.save();
     ctx.translate(f.cx + gt.dx * u, ey + gt.dy * u);
     ctx.scale(gt.scale, gt.scale);
@@ -1970,28 +2129,47 @@ function renderTabs() {
 
 function switchPropTab(key) {
     currentPropTab = key;
-    if (key === 'hat' || key === 'glasses') activeAccessory = key;
     renderTabs();
     loadProps();
-    updateAccessoryControls();
 }
 
 function loadProps() {
     var grid = document.getElementById('propsGrid');
     grid.innerHTML = '';
     var cat = getCategory(currentPropTab);
+    var multi = (cat.key === 'hat' || cat.key === 'glasses' || cat.key === 'effect');
     cat.items.forEach(function(prop) {
+        var count = 0, on = false;
+        if (cat.key === 'hat' || cat.key === 'glasses') {
+            count = placed.filter(function(p) { return p.kind === cat.key && p.id === prop.id; }).length;
+            on = count > 0;
+        } else if (cat.key === 'effect') {
+            on = effects.indexOf(prop.id) >= 0;
+        } else {
+            on = selectedProps[cat.key] === prop.id;
+        }
+        var isNone = prop.id === 'none';
+        var label = (multi && isNone) ? 'Quitar todos' : prop.name;
         var item = document.createElement('button');
         item.type = 'button';
-        item.className = 'prop-item' + (selectedProps[cat.key] === prop.id ? ' selected' : '');
-        item.title = prop.name;
-        item.innerHTML = '<span class="prop-emoji">' + prop.emoji + '</span><span class="prop-name">' + prop.name + '</span>';
+        item.className = 'prop-item' + (on && !isNone ? ' selected' : '') + (isNone && !multi && on ? ' selected' : '');
+        item.title = multi && !isNone ? (cat.key === 'effect' ? 'Pulsa para activar / desactivar' : 'Pulsa para añadir (puedes poner varios)') : label;
+        item.innerHTML = '<span class="prop-emoji">' + prop.emoji + '</span><span class="prop-name">' + label + '</span>' +
+            (count > 0 ? '<span class="prop-count">×' + count + '</span>' : '');
         item.onclick = function() { selectProp(prop.id, cat.key); };
         grid.appendChild(item);
     });
 }
 
 function selectProp(propId, category) {
+    if (category === 'hat' || category === 'glasses') {
+        if (propId === 'none') clearAccessories(category); else addAccessory(category, propId);
+        return;
+    }
+    if (category === 'effect') {
+        if (propId === 'none') { effects = []; loadProps(); updateSummary(); } else toggleEffect(propId);
+        return;
+    }
     selectedProps[category] = propId;
     loadProps();
     updateSummary();
@@ -1999,12 +2177,16 @@ function selectProp(propId, category) {
 
 function updateSummary() {
     var parts = [];
+    function meta(cat, id) { return cat.items.filter(function(x) { return x.id === id; })[0]; }
     propCategories.forEach(function(cat) {
-        var id = selectedProps[cat.key];
-        if (id && id !== 'none') {
-            var it = cat.items.filter(function(x) { return x.id === id; })[0];
+        var ids = [];
+        if (cat.key === 'hat' || cat.key === 'glasses') ids = placed.filter(function(p) { return p.kind === cat.key; }).map(function(p) { return p.id; });
+        else if (cat.key === 'effect') ids = effects.slice();
+        else if (selectedProps[cat.key] && selectedProps[cat.key] !== 'none') ids = [selectedProps[cat.key]];
+        ids.forEach(function(id) {
+            var it = meta(cat, id);
             if (it) parts.push(it.emoji + ' ' + it.name);
-        }
+        });
     });
     document.getElementById('propsSummary').textContent = parts.length ? parts.join(' · ') : 'Sin accesorios';
 }
