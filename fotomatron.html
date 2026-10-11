@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 Super Fotomatón Divertido</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+            --accent: #ffe66d;
+            --dark: #292f36;
+            --light: #f7fff7;
+            --fun-pink: #ff9ff3;
+            --fun-blue: #54a0ff;
+            --fun-purple: #a55eea;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Comic Neue', cursive, sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, #1a1a2e 50%, var(--dark) 100%);
+            min-height: 100vh;
+            color: var(--light);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(84, 160, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 50% 50%, rgba(165, 94, 234, 0.05) 0%, transparent 30%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: rainbowBorder 8s linear infinite;
+        }
+
+        @keyframes rainbowBorder {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3); color: white; }
+        .subtitle { font-size: 1.2em; color: rgba(255, 255, 255, 0.9); margin-bottom: 10px; }
+        .tagline { font-style: italic; color: var(--accent); font-size: 1.1em; }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+
+        /* Camera Section */
+        .camera-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .camera-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .camera-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--accent);
+            font-size: 1.5em;
+            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .camera-frame {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 3px dashed var(--accent);
+            border-radius: 10px;
+            pointer-events: none;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.01); }
+        }
+
+        .camera-corner {
+            position: absolute;
+            width: 30px; height: 30px;
+            border: 3px solid var(--accent);
+            border-radius: 50%;
+            background: var(--dark);
+            pointer-events: none;
+        }
+        .camera-corner.tl { top: 15px; left: 15px; }
+        .camera-corner.tr { top: 15px; right: 15px; }
+        .camera-corner.bl { bottom: 15px; left: 15px; }
+        .camera-corner.br { bottom: 15px; right: 15px; }
+
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #ff8e8e);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            background: linear-gradient(135deg, #ff8e8e, var(--primary));
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), #6ed3d3);
+            color: white;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(84, 160, 255, 0.4);
+            background: linear-gradient(135deg, #6ed3d3, var(--secondary));
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #ffed86);
+            color: var(--dark);
+        }
+        .btn-accent:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 230, 109, 0.4);
+            background: linear-gradient(135deg, #ffed86, var(--accent));
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:active:not(:disabled) { transform: translateY(1px); }
+
+        /* Settings Section */
+        .settings-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--secondary);
+            font-size: 1.5em;
+        }
+
+        .settings-grid { display: grid; gap: 20px; }
+
+        .setting-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 1.1em;
+        }
+
+        .setting-item .description {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(255, 230, 109, 0.5);
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 1.2em;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 10px;
+            border-radius: 8px;
+        }
+
+        .photo-count-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .photo-option {
+            width: 60px; height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 1.5em;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .photo-option:hover {
+            border-color: var(--accent);
+            background: rgba(255, 230, 109, 0.2);
+            transform: scale(1.05);
+        }
+
+        .photo-option.selected {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: var(--dark);
+            box-shadow: 0 0 20px rgba(255, 230, 109, 0.5);
+        }
+
+        /* Props Section */
+        .props-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .props-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--fun-pink);
+            font-size: 1.5em;
+        }
+
+        .props-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .prop-tab {
+            padding: 10px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .prop-tab:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 230, 109, 0.1);
+        }
+
+        .prop-tab.active {
+            border-color: var(--accent);
+            color: var(--dark);
+            background: var(--accent);
+        }
+
+        .props-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+        }
+
+        .prop-item {
+            aspect-ratio: 1;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prop-item:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 230, 109, 0.3);
+        }
+
+        .prop-item.selected {
+            border-color: var(--fun-pink);
+            box-shadow: 0 0 25px rgba(255, 159, 243, 0.6);
+            transform: scale(1.02);
+        }
+
+        .prop-item .prop-emoji {
+            font-size: 2.5em;
+            text-align: center;
+            line-height: 100%;
+            padding: 20px 0;
+        }
+
+        .prop-item .prop-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px;
+            text-align: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Gallery Section */
+        .gallery-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gallery-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--fun-blue);
+            font-size: 1.5em;
+        }
+
+        .photo-strip-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            border: 2px dashed var(--fun-pink);
+            min-height: 200px;
+        }
+
+        .photo-strip {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .photo-slot {
+            width: 150px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-slot .slot-number {
+            font-size: 2em;
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: bold;
+        }
+
+        .photo-slot.filled {
+            border-style: solid;
+            border-color: var(--secondary);
+            background: rgba(84, 160, 255, 0.1);
+        }
+
+        .gallery-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Status and Messages */
+        .status-bar {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-bar .status-text {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .countdown-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Error Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--dark);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--primary);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal h3 { color: var(--primary); margin-bottom: 15px; font-size: 1.8em; }
+        .modal p { margin-bottom: 25px; color: rgba(255, 255, 255, 0.9); line-height: 1.6; }
+        .modal-actions { display: flex; justify-content: center; gap: 15px; }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Confetti Effect */
+        .confetti-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+        }
+
+        .confetti-container.active { display: block; }
+
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: confettiFall 3s linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { opacity: 1; transform: translateY(-100px) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+        }
+
+        /* Floating Decorations */
+        .floating-emoji {
+            position: fixed;
+            font-size: 2em;
+            opacity: 0.3;
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+
+        .floating-emoji:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .floating-emoji:nth-child(2) { top: 20%; right: 10%; animation-delay: 1s; }
+        .floating-emoji:nth-child(3) { top: 60%; left: 15%; animation-delay: 2s; }
+        .floating-emoji:nth-child(4) { top: 70%; right: 5%; animation-delay: 3s; }
+        .floating-emoji:nth-child(5) { top: 30%; left: 80%; animation-delay: 4s; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            h1 { font-size: 1.8em; }
+            .main-content { grid-template-columns: 1fr; }
+            .camera-container { aspect-ratio: 1; }
+            .photo-option { width: 50px; height: 50px; font-size: 1.2em; }
+            .photo-slot { width: 100px; height: 130px; }
+            .countdown-display { font-size: 2em; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Decorations -->
+    <div class="floating-emoji">📸</div>
+    <div class="floating-emoji">🎭</div>
+    <div class="floating-emoji">✨</div>
+    <div class="floating-emoji">🎉</div>
+    <div class="floating-emoji">😎</div>
+
+    <!-- Confetti Container -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- Error Modal -->
+    <div class="modal-overlay" id="errorModal">
+        <div class="modal">
+            <h3>⚠️ Error de Cámara</h3>
+            <p id="errorMessage">No se pudo acceder a la cámara. Por favor, verifica los permisos.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="closeErrorModal()">Reintentar</button>
+                <button class="btn btn-secondary" onclick="closeErrorModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>📸 Super Fotomatón Divertido</h1>
+            <div class="subtitle">¡Crea recuerdos épicos!</div>
+            <div class="tagline">Elige tu estilo, sonríe y... ¡CLICK!</div>
+        </header>
+
+        <div class="main-content">
+            <!-- Camera Section -->
+            <section class="camera-section">
+                <h2>🎥 Cámara</h2>
+                <div class="camera-container">
+                    <video id="cameraView" autoplay playsinline></video>
+                    <div class="camera-overlay"></div>
+                    <div class="camera-frame"></div>
+                    <div class="camera-corner tl"></div>
+                    <div class="camera-corner tr"></div>
+                    <div class="camera-corner bl"></div>
+                    <div class="camera-corner br"></div>
+                    <canvas id="compositeCanvas" style="display: none;"></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button class="btn btn-primary" id="startBtn" onclick="startPhotoBooth()">
+                        <span id="startBtnText">🚀 Empezar Sesión</span>
+                        <span id="startBtnLoading" style="display: none;"><span class="loading"></span></span>
+                    </button>
+                    <button class="btn btn-accent" id="takePhotoBtn" onclick="takePhoto()" disabled>📸 Tomar Foto</button>
+                    <button class="btn btn-secondary" id="stopBtn" onclick="stopPhotoBooth()" disabled>⏹️ Detener</button>
+                </div>
+                <div class="status-bar">
+                    <span class="status-text" id="statusText">Listo para empezar</span>
+                    <div class="countdown-display" id="countdownDisplay" style="display: none;"></div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="settings-section">
+                <h2>⚙️ Configuración</h2>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Número de Fotos</label>
+                        <div class="description">Elige cuántas fotos (1-4)</div>
+                        <div class="photo-count-selector" id="photoCountSelector">
+                            <div class="photo-option" data-count="1" onclick="selectPhotoCount(1)">1</div>
+                            <div class="photo-option" data-count="2" onclick="selectPhotoCount(2)">2</div>
+                            <div class="photo-option selected" data-count="4" onclick="selectPhotoCount(4)">4</div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>Tiempo entre Fotos</label>
+                        <div class="description">Segundos para posar</div>
+                        <div class="slider-container">
+                            <input type="range" id="timeBetweenPhotos" min="2" max="10" value="3" oninput="updateTimeBetweenPhotos(this.value)">
+                            <span class="slider-value" id="timeBetweenPhotosValue">3s</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>Tiempo de Cuenta Atrás</label>
+                        <div class="description">Segundos para prepararse</div>
+                        <div class="slider-container">
+                            <input type="range" id="countdownTime" min="2" max="10" value="3" oninput="updateCountdownTime(this.value)">
+                            <span class="slider-value" id="countdownTimeValue">3s</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Props Section -->
+        <section class="props-section">
+            <h2>🎭 Accesorios y Fondos</h2>
+            <div class="props-tabs">
+                <button class="prop-tab active" onclick="switchPropTab('filters')">Filtros</button>
+                <button class="prop-tab" onclick="switchPropTab('hats')">Sombreros</button>
+                <button class="prop-tab" onclick="switchPropTab('glasses')">Gafas</button>
+                <button class="prop-tab" onclick="switchPropTab('backgrounds')">Fondos</button>
+                <button class="prop-tab" onclick="switchPropTab('effects')">Efectos</button>
+            </div>
+            <div class="props-grid" id="propsGrid"></div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section class="gallery-section">
+            <h2>🖼️ Tu Tira de Fotos</h2>
+            <div class="photo-strip-container">
+                <div class="photo-strip" id="photoStrip"></div>
+            </div>
+            <div class="gallery-actions">
+                <button class="btn btn-accent" onclick="clearPhotos()">🗑️ Limpiar</button>
+                <button class="btn btn-primary" onclick="downloadPhotoStrip()" id="downloadBtn" disabled>💾 Descargar Tira</button>
+                <button class="btn btn-secondary" onclick="sharePhotoStrip()" id="shareBtn" disabled>📤 Compartir</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="fotomatron.js"></script>
+</body>
+</html>
