@@ -3283,13 +3283,22 @@ function updateStatus(text) {
 }
 
 // ===== Props UI =====
+// How many options of a category are switched on (shown in brackets on its tab).
+function activeCount(key) {
+    if (key === 'hat' || key === 'glasses') return placed.filter(function(p) { return p.kind === key; }).length;
+    if (key === 'effect') return effects.length;
+    if (key === 'finish2') return finishLayers.length;
+    return selectedProps[key] && selectedProps[key] !== 'none' ? 1 : 0;
+}
+
 function renderTabs() {
     var tabs = document.getElementById('propsTabs');
     tabs.innerHTML = '';
     propCategories.forEach(function(cat) {
         var btn = document.createElement('button');
         btn.className = 'prop-tab' + (cat.key === currentPropTab ? ' active' : '');
-        btn.textContent = cat.icon + ' ' + cat.label;
+        var n = activeCount(cat.key);
+        btn.textContent = cat.icon + ' ' + cat.label + (n > 0 ? ' (' + n + ')' : '');
         btn.onclick = function() { switchPropTab(cat.key); };
         tabs.appendChild(btn);
     });
@@ -3394,6 +3403,7 @@ function updateSummary() {
         });
     });
     document.getElementById('propsSummary').textContent = parts.length ? parts.join(' · ') : 'Sin accesorios';
+    renderTabs();                       // keeps the "(n)" counters on the tabs in sync with every change
 }
 
 // ===== Sound =====
