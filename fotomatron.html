@@ -482,6 +482,20 @@
 
         .switch-row input { width: 18px; height: 18px; accent-color: var(--secondary); cursor: pointer; }
 
+        .finish-group { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--panel-border); }
+        .finish-group:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+        .finish-controls select {
+            width: 100%;
+            margin-bottom: 6px;
+            padding: 5px 8px;
+            border-radius: 8px;
+            border: 2px solid var(--panel-border);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--light);
+            font-family: inherit;
+        }
+
         .distort-controls {
             margin-top: 10px;
             padding: 8px 10px;
@@ -760,10 +774,7 @@
             <span>🧽 Muévete delante de la cámara para limpiar la pantalla y ver la imagen. La suciedad vuelve poco a poco.</span>
             <button class="btn secondary small" type="button" onclick="resetWishi()">↺ Ensuciar de nuevo</button>
         </div>
-        <div class="accessory-controls halftone-controls" id="halftoneControls" style="display:none;">
-            <label for="dotSize"><span>Tamaño del punto</span> <span id="dotSizeVal">100%</span></label>
-            <input type="range" id="dotSize" min="0.5" max="3" step="0.05" value="1" oninput="onHalftoneDot(this.value)">
-        </div>
+        <div class="accessory-controls finish-controls" id="finishControls" style="display:none;"></div>
         <div class="accessory-controls effect-controls" id="effectControls" style="display:none;">
             <label class="switch-row" for="fxReact">
                 <input type="checkbox" id="fxReact" checked onchange="onEffectReact(this.checked)">
@@ -1564,6 +1575,82 @@ var FILTERS = {
     warhol: { warhol: true }     // pop-art 2x2 grid, see applyWarhol()
 };
 
+// ===== Acabado settings schema: every look has its own sliders (intensity and appearance) =====
+var FINISH_PARAMS = {
+    comic: [
+        { key: 'edge', label: 'Contornos', min: 0, max: 2, step: 0.05, def: 1, unit: '%' },
+        { key: 'levels', label: 'Niveles de color', min: 2, max: 8, step: 1, def: 4, unit: '' },
+        { key: 'contrast', label: 'Contraste', min: 0.6, max: 2, step: 0.05, def: 1.3, unit: '%' }
+    ],
+    neon: [
+        { key: 'gain', label: 'Intensidad', min: 0.3, max: 2.5, step: 0.05, def: 0.9, unit: '%' },
+        { key: 'hue', label: 'Tono', min: 0, max: 360, step: 5, def: 0, unit: '°' },
+        { key: 'base', label: 'Imagen original', min: 0, max: 0.8, step: 0.05, def: 0.1, unit: '%' }
+    ],
+    photocopy: [
+        { key: 'thr', label: 'Umbral', min: -60, max: 60, step: 1, def: 0, unit: '' },
+        { key: 'hard', label: 'Dureza', min: 3, max: 40, step: 1, def: 10, unit: '' },
+        { key: 'paper', label: 'Papel cálido', min: 0, max: 1, step: 0.05, def: 1, unit: '%' }
+    ],
+    solarize: [
+        { key: 'thr', label: 'Umbral', min: 40, max: 220, step: 5, def: 110, unit: '' },
+        { key: 'gain', label: 'Brillo', min: 0.8, max: 2.2, step: 0.05, def: 1.5, unit: '%' }
+    ],
+    thermal: [
+        { key: 'mix', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 1, unit: '%' },
+        { key: 'contrast', label: 'Contraste', min: 0.5, max: 2, step: 0.05, def: 1, unit: '%' }
+    ],
+    duoneon: [
+        { key: 'mix', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 1, unit: '%' },
+        { key: 'contrast', label: 'Contraste', min: 0.5, max: 2, step: 0.05, def: 1, unit: '%' }
+    ],
+    gold: [
+        { key: 'mix', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 1, unit: '%' },
+        { key: 'contrast', label: 'Contraste', min: 0.5, max: 2, step: 0.05, def: 1, unit: '%' }
+    ],
+    planet: [
+        { key: 'spin', label: 'Giro', min: -3, max: 3, step: 0.1, def: 1, unit: '%' },
+        { key: 'zoom', label: 'Zoom', min: 0.5, max: 2.5, step: 0.05, def: 1, unit: '%' }
+    ],
+    halftone: [
+        { key: 'dot', label: 'Tamaño del punto', min: 0.5, max: 3, step: 0.05, def: 1, unit: '%' },
+        { key: 'gain', label: 'Relleno del punto', min: 0.5, max: 1.4, step: 0.05, def: 1, unit: '%' },
+        { key: 'sat', label: 'Color', min: 0.5, max: 2.2, step: 0.05, def: 1.35, unit: '%' }
+    ],
+    vignette: [
+        { key: 'amount', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 0.72, unit: '%' },
+        { key: 'size', label: 'Tamaño', min: 0.1, max: 0.9, step: 0.05, def: 0.32, unit: '%' },
+        { key: 'color', label: 'Color', type: 'select', def: '#000000',
+          options: [['#000000', 'Negro'], ['#ffffff', 'Blanco'], ['#3a1f0a', 'Sepia'], ['#0a1a4a', 'Azul noche'], ['#4a0a2a', 'Granate']] }
+    ],
+    grain: [
+        { key: 'amount', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 0.5, unit: '%' },
+        { key: 'size', label: 'Tamaño', min: 1, max: 5, step: 0.5, def: 1, unit: 'x' },
+        { key: 'color', label: 'Aspecto', type: 'select', def: 'mono', options: [['mono', 'Gris'], ['color', 'Color']] }
+    ],
+    crt: [
+        { key: 'amount', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 0.4, unit: '%' },
+        { key: 'gap', label: 'Grosor de línea', min: 2, max: 14, step: 1, def: 4, unit: 'px' },
+        { key: 'bar', label: 'Barra de luz', min: 0, max: 3, step: 0.1, def: 1, unit: '%' }
+    ],
+    glow: [
+        { key: 'amount', label: 'Intensidad', min: 0, max: 1, step: 0.05, def: 0.5, unit: '%' },
+        { key: 'radius', label: 'Radio', min: 0.3, max: 3, step: 0.05, def: 1, unit: '%' },
+        { key: 'tint', label: 'Color', type: 'select', def: '#ffffff',
+          options: [['#ffffff', 'Blanco'], ['#ffb36b', 'Cálido'], ['#7bb8ff', 'Frío'], ['#ff7bd5', 'Rosa']] }
+    ]
+};
+var FINISH_DEF = {};
+Object.keys(FINISH_PARAMS).forEach(function(id) {
+    FINISH_DEF[id] = {};
+    FINISH_PARAMS[id].forEach(function(p) { FINISH_DEF[id][p.key] = p.def; });
+});
+var finishParams = {};          // user overrides: { effectId: { key: value } }
+function fp(id, key) {
+    var o = finishParams[id];
+    return (o && o[key] !== undefined) ? o[key] : FINISH_DEF[id][key];
+}
+
 // ===== Acabado: GIMP-style looks (comic, neon edges, photocopy, solarize, colour maps, little planet, halftone) =====
 function makeLUT(stops) {                       // stops: [[0..1, [r, g, b]], ...] -> 256 RGB triplets
     var lut = new Uint8Array(256 * 3);
@@ -1589,6 +1676,14 @@ var finishCtx = finishCanvas.getContext('2d', { willReadFrequently: true });
 
 function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
 
+// 3x3 hue rotation (same matrix CSS hue-rotate() uses)
+function hueMatrix(deg) {
+    var a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    return [0.213 + c * 0.787 - s * 0.213, 0.715 - c * 0.715 - s * 0.715, 0.072 - c * 0.072 + s * 0.928,
+            0.213 - c * 0.213 + s * 0.143, 0.715 + c * 0.285 + s * 0.140, 0.072 - c * 0.072 - s * 0.283,
+            0.213 - c * 0.213 - s * 0.787, 0.715 - c * 0.715 + s * 0.715, 0.072 + c * 0.928 + s * 0.072];
+}
+
 function applyFinish(id, w, h, t) {
     if (id === 'halftone') { applyHalftone(w, h); return; }
     var k = renderHQ ? 1 : (id === 'planet' ? 0.35 : (id === 'comic' || id === 'neon' ? 0.4 : 0.5));   // the preview works at reduced resolution
@@ -1612,39 +1707,45 @@ function applyFinish(id, w, h, t) {
     }
 
     switch (id) {
-        case 'solarize':
+        case 'solarize': {
+            var sThr = fp('solarize', 'thr'), sGain = fp('solarize', 'gain');
             for (i = 0, p = 0; i < n; i++, p += 4) {
-                for (var c1 = 0; c1 < 3; c1++) { var v = s[p + c1]; s[p + c1] = clamp255((v > 110 ? 255 - v : v) * 1.5); }
+                for (var c1 = 0; c1 < 3; c1++) { var v = s[p + c1]; s[p + c1] = clamp255((v > sThr ? 255 - v : v) * sGain); }
             }
             break;
+        }
         case 'photocopy': {
             var mean = 0;
             for (i = 0; i < n; i++) mean += lum[i];
-            var thr = (mean / n) * 0.95;                         // adapts to the room's exposure
+            var thr = (mean / n) * 0.95 + fp('photocopy', 'thr');        // adapts to the room's exposure
+            var hard = fp('photocopy', 'hard'), pw = fp('photocopy', 'paper');
+            var PR = 252 - 2 * pw, PG = 252 - 4 * pw, PB = 252 - 12 * pw;   // paper: neutral white <-> warm
             for (i = 0, p = 0; i < n; i++, p += 4) {
-                var a1 = clamp255((lum[i] - thr) * 10 + 128) / 255;      // narrow soft step = antialiased threshold
-                s[p] = 22 + a1 * 228; s[p + 1] = 22 + a1 * 226; s[p + 2] = 24 + a1 * 216;   // ink on warm paper
+                var a1 = clamp255((lum[i] - thr) * hard + 128) / 255;    // narrow soft step = antialiased threshold
+                s[p] = 22 + a1 * (PR - 22); s[p + 1] = 22 + a1 * (PG - 22); s[p + 2] = 24 + a1 * (PB - 24);   // ink on paper
             }
             break;
         }
         case 'thermal': case 'duoneon': case 'gold': {
-            var lut = FINISH_LUTS[id];
+            var lut = FINISH_LUTS[id], lMix = fp(id, 'mix'), lCon = fp(id, 'contrast');
             for (i = 0, p = 0; i < n; i++, p += 4) {
-                var li = lum[i] < 0 ? 0 : (lum[i] > 255 ? 255 : (lum[i] | 0)) * 3;
-                s[p] = lut[li]; s[p + 1] = lut[li + 1]; s[p + 2] = lut[li + 2];
+                var li = (clamp255((lum[i] - 128) * lCon + 128) | 0) * 3;
+                s[p] += (lut[li] - s[p]) * lMix; s[p + 1] += (lut[li + 1] - s[p + 1]) * lMix; s[p + 2] += (lut[li + 2] - s[p + 2]) * lMix;
             }
             break;
         }
         case 'comic': {
             var out = finishCtx.createImageData(sw, sh), d = out.data;
+            var cEdge = fp('comic', 'edge'), cThr = cEdge <= 0.01 ? 1e9 : 130 / cEdge;
+            var cLev = fp('comic', 'levels'), cStep = 255 / (cLev - 1), cCon = fp('comic', 'contrast');
             for (y = 0; y < sh; y++) {
                 for (x = 0; x < sw; x++) {
                     i = y * sw + x; p = i * 4;
                     sobel(x, y);
-                    if (Math.sqrt(GX * GX + GY * GY) > 130) { d[p] = d[p + 1] = d[p + 2] = 10; d[p + 3] = 255; continue; }
+                    if (Math.sqrt(GX * GX + GY * GY) > cThr) { d[p] = d[p + 1] = d[p + 2] = 10; d[p + 3] = 255; continue; }
                     for (var c2 = 0; c2 < 3; c2++) {              // contrast, then four flat tones per channel
-                        var q = clamp255((s[p + c2] - 128) * 1.3 + 128);
-                        d[p + c2] = Math.round(q / 85) * 85 > 255 ? 255 : Math.round(q / 85) * 85;
+                        var q = clamp255((s[p + c2] - 128) * cCon + 128);
+                        d[p + c2] = clamp255(Math.round(q / cStep) * cStep);
                     }
                     d[p + 3] = 255;
                 }
@@ -1658,15 +1759,17 @@ function applyFinish(id, w, h, t) {
         }
         case 'neon': {
             var out2 = finishCtx.createImageData(sw, sh), d2 = out2.data;
+            var nGain = fp('neon', 'gain'), nBase = fp('neon', 'base'), hm = hueMatrix(fp('neon', 'hue'));
             for (y = 0; y < sh; y++) {
                 for (x = 0; x < sw; x++) {
                     i = y * sw + x; p = i * 4;
                     sobel(x, y);
-                    var m = Math.min(255, Math.sqrt(GX * GX + GY * GY) * 0.9);
+                    var m = Math.min(255, Math.sqrt(GX * GX + GY * GY) * nGain);
                     var warm = GX > 0 ? 1 : 0.25;                // light from one side is pink, from the other cyan
-                    d2[p] = clamp255(m * (0.35 + 0.65 * warm) + s[p] * 0.1);
-                    d2[p + 1] = clamp255(m * 0.55 + s[p + 1] * 0.1);
-                    d2[p + 2] = clamp255(m * (1.0 - 0.6 * warm + 0.4) + s[p + 2] * 0.1);
+                    var nr = m * (0.35 + 0.65 * warm), ng = m * 0.55, nb = m * (1.0 - 0.6 * warm + 0.4);
+                    d2[p] = clamp255(nr * hm[0] + ng * hm[1] + nb * hm[2] + s[p] * nBase);
+                    d2[p + 1] = clamp255(nr * hm[3] + ng * hm[4] + nb * hm[5] + s[p + 1] * nBase);
+                    d2[p + 2] = clamp255(nr * hm[6] + ng * hm[7] + nb * hm[8] + s[p + 2] * nBase);
                     d2[p + 3] = 255;
                 }
             }
@@ -1679,14 +1782,14 @@ function applyFinish(id, w, h, t) {
         }
         case 'planet': {
             var out3 = finishCtx.createImageData(sw, sh), d3 = out3.data;
-            var cx = sw / 2, cy = sh / 2, rmax = Math.hypot(sw, sh) / 2, rot = t * 0.00004;
+            var cx = sw / 2, cy = sh / 2, rmax = Math.hypot(sw, sh) / 2, rot = t * 0.00004 * fp('planet', 'spin'), pZoom = fp('planet', 'zoom');
             var TAU = Math.PI * 2;
             for (y = 0; y < sh; y++) {
                 for (x = 0; x < sw; x++) {
                     var dx = x - cx, dy = y - cy, r = Math.sqrt(dx * dx + dy * dy);
                     var a = Math.atan2(dy, dx) / TAU + 0.5 + rot;
                     a -= Math.floor(a);
-                    var u = a * sw, vv = (1 - r / rmax) * (sh - 1.001);   // ground (image bottom) in the middle, sky outside
+                    var u = a * sw, vv = (1 - r * pZoom / rmax) * (sh - 1.001);   // ground (image bottom) in the middle, sky outside
                     if (vv < 0) vv = 0;
                     var x0 = u | 0, x1 = (x0 + 1) % sw, y0 = vv | 0, fx = u - x0, fy = vv - y0;
                     var i00 = (y0 * sw + x0) * 4, i10 = (y0 * sw + x1) * 4, i01 = ((y0 + 1) * sw + x0) * 4, i11 = ((y0 + 1) * sw + x1) * 4;
@@ -1731,6 +1834,27 @@ function getGrainPool() {
     return grainPool;
 }
 
+var grainColorPool = null;
+function getGrainColorPool() {
+    if (grainColorPool) return grainColorPool;
+    grainColorPool = [];
+    for (var k = 0; k < 4; k++) {
+        var c = document.createElement('canvas');
+        c.width = c.height = 192;
+        var x = c.getContext('2d'), img = x.createImageData(192, 192), d = img.data;
+        for (var i = 0; i < d.length; i += 4) {
+            d[i] = Math.random() * 255; d[i + 1] = Math.random() * 255; d[i + 2] = Math.random() * 255; d[i + 3] = 255;
+        }
+        x.putImageData(img, 0, 0);
+        grainColorPool.push(c);
+    }
+    return grainColorPool;
+}
+
+function hexRgba(hex, a) {
+    return 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + a + ')';
+}
+
 // Order is fixed: glow -> CRT -> grain -> vignette, whatever the click order.
 function drawFinishLayers(ctx, w, h, t) {
     var s = w / 1280;
@@ -1741,38 +1865,56 @@ function drawFinishLayers(ctx, w, h, t) {
     ctx.imageSmoothingEnabled = true;
 
     if (finishLayers.indexOf('glow') >= 0) {                  // soft glow (Orton): blurred copy screened over the picture
-        var gw = Math.max(8, Math.round(w / 10)), gh = Math.max(6, Math.round(h / 10));
+        var gRad = fp('glow', 'radius');
+        var gw = Math.max(6, Math.round(w / (10 * gRad))), gh = Math.max(5, Math.round(h / (10 * gRad)));
         if (glowSmall.width !== gw || glowSmall.height !== gh) { glowSmall.width = gw; glowSmall.height = gh; }
+        glowCtx.globalCompositeOperation = 'source-over';
         glowCtx.drawImage(ctx.canvas, 0, 0, w, h, 0, 0, gw, gh);
+        var tint = fp('glow', 'tint');
+        if (tint !== '#ffffff') {
+            glowCtx.globalCompositeOperation = 'multiply';
+            glowCtx.fillStyle = tint;
+            glowCtx.fillRect(0, 0, gw, gh);
+            glowCtx.globalCompositeOperation = 'source-over';
+        }
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = fp('glow', 'amount');
         ctx.drawImage(glowSmall, 0, 0, gw, gh, 0, 0, w, h);
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
     }
     if (finishLayers.indexOf('crt') >= 0) {                   // scanlines, a slow rolling bar and a touch of flicker
-        var gap = Math.max(3, Math.round(4 * s));
+        var gap = Math.max(2, Math.round(fp('crt', 'gap') * s));
+        var thick = Math.max(1, Math.round(gap / 3));
         var ys = h / gap | 0;
-        ctx.fillStyle = 'rgba(0,0,0,' + (0.38 + 0.06 * Math.sin(t * 0.03)) + ')';
-        for (var i = 0; i < ys; i++) ctx.fillRect(0, i * gap + gap - Math.max(1, Math.round(gap / 3)), w, Math.max(1, Math.round(gap / 3)));
-        var by = (((t / 1000) * 0.15) % 1.4 - 0.2) * h, bh = h * 0.16;
-        var bg = ctx.createLinearGradient(0, by, 0, by + bh);
-        bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,0.07)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = bg; ctx.fillRect(0, by, w, bh);
+        ctx.fillStyle = 'rgba(0,0,0,' + (fp('crt', 'amount') * (0.92 + 0.08 * Math.sin(t * 0.03))) + ')';
+        for (var i = 0; i < ys; i++) ctx.fillRect(0, i * gap + gap - thick, w, thick);
+        var barA = 0.07 * fp('crt', 'bar');
+        if (barA > 0.001) {
+            var by = (((t / 1000) * 0.15) % 1.4 - 0.2) * h, bh = h * 0.16;
+            var bg = ctx.createLinearGradient(0, by, 0, by + bh);
+            bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, 'rgba(255,255,255,' + barA + ')'); bg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = bg; ctx.fillRect(0, by, w, bh);
+        }
     }
-    if (finishLayers.indexOf('grain') >= 0) {                 // film grain: neutral-grey noise in "overlay" mode, re-randomised every frame
-        var pool = getGrainPool(), tex = pool[(Math.random() * pool.length) | 0];
-        var ox = -((Math.random() * 192) | 0), oy = -((Math.random() * 192) | 0);
+    if (finishLayers.indexOf('grain') >= 0) {                 // film grain: neutral noise in "overlay" mode, re-randomised every frame
+        var gColor = fp('grain', 'color') === 'color';
+        var pool = gColor ? getGrainColorPool() : getGrainPool(), tex = pool[(Math.random() * pool.length) | 0];
+        var gSize = fp('grain', 'size'), tile = Math.round(192 * gSize);
+        var ox = -((Math.random() * tile) | 0), oy = -((Math.random() * tile) | 0);
         ctx.globalCompositeOperation = 'overlay';
-        ctx.globalAlpha = 0.5;
-        for (var gy = oy; gy < h; gy += 192) for (var gx = ox; gx < w; gx += 192) ctx.drawImage(tex, gx, gy);
+        ctx.globalAlpha = fp('grain', 'amount');
+        ctx.imageSmoothingEnabled = gSize <= 1;
+        for (var gy = oy; gy < h; gy += tile) for (var gx = ox; gx < w; gx += tile) ctx.drawImage(tex, gx, gy, tile, tile);
+        ctx.imageSmoothingEnabled = true;
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
     }
     if (finishLayers.indexOf('vignette') >= 0) {
-        var vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.32, w / 2, h / 2, Math.hypot(w, h) * 0.52);
-        vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, 'rgba(0,0,0,0.72)');
+        var vAmount = fp('vignette', 'amount'), vCol = fp('vignette', 'color');
+        var vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * fp('vignette', 'size'), w / 2, h / 2, Math.hypot(w, h) * 0.52);
+        vg.addColorStop(0, hexRgba(vCol, 0));
+        vg.addColorStop(1, hexRgba(vCol, vAmount));
         ctx.fillStyle = vg;
         ctx.fillRect(0, 0, w, h);
     }
@@ -1781,7 +1923,8 @@ function drawFinishLayers(ctx, w, h, t) {
 
 // Pop-art halftone: one colour dot per cell, bigger where the picture is darker, on newsprint-coloured paper.
 function applyHalftone(w, h) {
-    var cell = Math.max(6, Math.round(w / 90 * finishSettings.dot));
+    var cell = Math.max(6, Math.round(w / 90 * fp('halftone', 'dot')));
+    var hGain = fp('halftone', 'gain'), hSat = fp('halftone', 'sat');
     var cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
     if (finishCanvas.width !== cols || finishCanvas.height !== rows) { finishCanvas.width = cols; finishCanvas.height = rows; }
     finishCtx.drawImage(vidCanvas, 0, 0, w, h, 0, 0, cols, rows);
@@ -1795,9 +1938,9 @@ function applyHalftone(w, h) {
         for (var x = 0; x < cols; x++) {
             var p = (y * cols + x) * 4, r = d[p], g = d[p + 1], b = d[p + 2];
             var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            var rad = cell * 0.78 * Math.sqrt(1 - lum * 0.94);
+            var rad = cell * 0.78 * hGain * Math.sqrt(1 - lum * 0.94);
             if (rad < 0.8) continue;
-            vidCtx.fillStyle = 'rgb(' + clamp255((r - 128) * 1.35 + 128) + ',' + clamp255((g - 128) * 1.35 + 128) + ',' + clamp255((b - 128) * 1.35 + 128) + ')';
+            vidCtx.fillStyle = 'rgb(' + clamp255((r - 128) * hSat + 128) + ',' + clamp255((g - 128) * hSat + 128) + ',' + clamp255((b - 128) * hSat + 128) + ')';
             vidCtx.beginPath();
             vidCtx.arc((x + 0.5) * cell, (y + 0.5) * cell, rad, 0, Math.PI * 2);
             vidCtx.fill();
@@ -2792,17 +2935,85 @@ function drawWishi(ctx, w, h) {
 function updateWishiControls() {
     var box = document.getElementById('wishiControls');
     if (box) box.style.display = selectedProps.background === 'wishi' ? 'block' : 'none';
-    var ht = document.getElementById('halftoneControls');
-    if (ht) {
-        ht.style.display = (selectedProps.finish === 'halftone' && currentPropTab === 'finish') ? 'block' : 'none';
-        document.getElementById('dotSize').value = finishSettings.dot;
-        document.getElementById('dotSizeVal').textContent = Math.round(finishSettings.dot * 100) + '%';
-    }
+    updateFinishControls();
 }
 
-function onHalftoneDot(v) {
-    finishSettings.dot = parseFloat(v);
-    updateWishiControls();
+// Settings panel for the active Acabado look (Acabado-1) or for every active layer (Acabado-2).
+var finishUiSig = '';
+
+function fmtFinish(p, v) {
+    if (p.unit === '%') return Math.round(v * 100) + '%';
+    if (p.unit === 'x') return v.toFixed(1) + '×';
+    if (p.unit === '°') return Math.round(v) + '°';
+    return (Math.round(v * 10) / 10) + (p.unit || '');
+}
+
+function finishMeta(id) {
+    var cats = ['finish', 'finish2'];
+    for (var c = 0; c < cats.length; c++) {
+        var items = getCategory(cats[c]).items;
+        for (var i = 0; i < items.length; i++) if (items[i].id === id) return items[i];
+    }
+    return { name: id, emoji: '' };
+}
+
+function updateFinishControls() {
+    var box = document.getElementById('finishControls');
+    if (!box) return;
+    var ids = [];
+    if (currentPropTab === 'finish' && selectedProps.finish !== 'none') ids = [selectedProps.finish];
+    else if (currentPropTab === 'finish2') {
+        ids = getCategory('finish2').items.map(function(x) { return x.id; }).filter(function(id) { return finishLayers.indexOf(id) >= 0; });
+    }
+    box.style.display = ids.length ? 'block' : 'none';
+    var sig = ids.join(',');
+    if (sig === finishUiSig) return;                      // same controls: keep the DOM (a slider may be mid-drag)
+    finishUiSig = sig;
+    box.innerHTML = '';
+    ids.forEach(function(id) {
+        var meta = finishMeta(id);
+        var g = document.createElement('div');
+        g.className = 'finish-group';
+        var h = document.createElement('div');
+        h.className = 'placed-title';
+        h.textContent = meta.emoji + ' ' + meta.name;
+        g.appendChild(h);
+        FINISH_PARAMS[id].forEach(function(p) {
+            var cur = fp(id, p.key);
+            var lab = document.createElement('label');
+            var name = document.createElement('span'); name.textContent = p.label;
+            lab.appendChild(name);
+            if (p.type === 'select') {
+                g.appendChild(lab);
+                var sel = document.createElement('select');
+                p.options.forEach(function(o) {
+                    var op = document.createElement('option');
+                    op.value = o[0]; op.textContent = o[1];
+                    if (o[0] === cur) op.selected = true;
+                    sel.appendChild(op);
+                });
+                sel.onchange = function() { setFinishParam(id, p.key, sel.value); };
+                g.appendChild(sel);
+            } else {
+                var val = document.createElement('span'); val.textContent = fmtFinish(p, cur);
+                lab.appendChild(val);
+                g.appendChild(lab);
+                var rng = document.createElement('input');
+                rng.type = 'range'; rng.min = p.min; rng.max = p.max; rng.step = p.step; rng.value = cur;
+                rng.oninput = function() { var v = parseFloat(rng.value); setFinishParam(id, p.key, v); val.textContent = fmtFinish(p, v); };
+                g.appendChild(rng);
+            }
+        });
+        var reset = document.createElement('button');
+        reset.type = 'button'; reset.className = 'btn secondary small'; reset.textContent = '↺ Restablecer';
+        reset.onclick = function() { delete finishParams[id]; finishUiSig = ''; updateFinishControls(); };
+        g.appendChild(reset);
+        box.appendChild(g);
+    });
+}
+
+function setFinishParam(id, key, value) {
+    (finishParams[id] || (finishParams[id] = {}))[key] = value;
 }
 
 // ===== Effects (animated overlays) =====
@@ -3122,7 +3333,7 @@ function selectProp(propId, category) {
     if (category === 'finish2') {
         if (propId === 'none') finishLayers = [];
         else { var li = finishLayers.indexOf(propId); if (li >= 0) finishLayers.splice(li, 1); else finishLayers.push(propId); }
-        loadProps(); updateSummary();
+        loadProps(); updateSummary(); updateFinishControls();
         return;
     }
     // single-choice categories: pressing the active option again switches it off, like the decorations
