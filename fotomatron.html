@@ -388,17 +388,16 @@
             background: var(--accent);
             border-radius: 50%;
             opacity: 0;
-            animation: confettiFall 3s linear forwards;
         }
 
-        @keyframes confettiFall {
+        @keyframes confettiRise {
             0% {
                 opacity: 1;
-                transform: translateY(-100px) rotate(0deg);
+                transform: translateY(100vh) rotate(0deg);
             }
             100% {
                 opacity: 0;
-                transform: translateY(100vh) rotate(720deg);
+                transform: translateY(100px) rotate(720deg);
             }
         }
 
@@ -814,7 +813,9 @@ function triggerConfetti() {
         var confetti = document.createElement('div');
         confetti.className = 'confetti';
         confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.bottom = '0';
         confetti.style.background = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ffffff'][Math.floor(Math.random() * 4)];
+        confetti.style.animation = 'confettiRise 3s linear forwards';
         container.appendChild(confetti);
     }
     setTimeout(function() {
