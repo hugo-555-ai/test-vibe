@@ -799,8 +799,8 @@
 
     <div class="props-section">
         <h2>Accesorios</h2>
-        <button class="btn secondary small reset-filters" type="button" id="resetFiltersBtn" onclick="resetFilters()"
-                title="Quita filtro, distorsión, acabados y capas, y devuelve sus ajustes a los valores por defecto">🧹 Quitar todos los filtros</button>
+        <button class="btn secondary small reset-filters" type="button" id="resetFiltersBtn" onclick="resetAll()"
+                title="Quita todo (filtros, accesorios, decoración, fondo y fotos) y devuelve todos los ajustes a sus valores por defecto, como al recargar la página con F5">🧹 Quitar todo y restablecer</button>
         <div class="props-tabs" id="propsTabs"></div>
         <div class="props-grid" id="propsGrid"></div>
         <div class="distort-controls" id="distortControls" style="display:none;">
@@ -3517,24 +3517,64 @@ function removeProp(propId, category) {
     }
 }
 
-// Clears every image look (Filtros, Distorsión, Acabado-1, Acabado-2) and puts all their settings back to defaults.
-// Accessories, decoration and backgrounds are left alone.
-function resetFilters() {
-    selectedProps.filter = 'none';
-    selectedProps.distort = 'none';
-    selectedProps.finish = 'none';
+// Puts the whole page back to the state it has right after loading (what F5 would give), but keeps the camera
+// stream: with file:// the browser would ask for the camera permission again after a real reload.
+function resetAll() {
+    // anything running
+    clearSessionTimers();
+    isSessionRunning = false;
+    dragState = null;
+    activePointers = {};
+    stopNudge();
+    closeErrorModal();
+    document.getElementById('countdownDisplay').classList.remove('active');
+    document.getElementById('recBadge').classList.remove('active');
+    document.getElementById('startBtn').style.display = '';
+    hidePose();
+    var cursorTarget = document.getElementById('previewCanvas');
+    if (cursorTarget) cursorTarget.style.cursor = 'default';
+
+    // photos of the strip
+    photos.forEach(function(url) { URL.revokeObjectURL(url); });
+    photos = [];
+    currentPhotoIndex = 0;
+    sessionPoses = [];
+    resetPhotoSlots();
+
+    // looks, accessories and decoration
+    selectedProps = { filter: 'none', distort: 'none', finish: 'none', background: 'none' };
+    placed = [];
+    nextUid = 1;
+    selectedUid = null;
+    effects = [];
     finishLayers = [];
-    editSel.finish2 = null;
+    editSel = { effect: null, finish2: null };
+    effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1, sound: true };
+    finishSettings = { dot: 1 };
     finishParams = {};
-    finishSettings.dot = 1;
-    distortCenter.x = 0.5;
-    distortCenter.y = 0.5;
-    finishUiSig = '';                       // force the settings panel to rebuild from defaults
+    finishUiSig = '';
+    distortCenter = { x: 0.5, y: 0.5 };
+    fxStates = {};
+    rainLevelSet = -1;
+    stopRainSound();
+    resetWishi();
+    motion.field.fill(0);
+    motion.level = 0;
+    motion.has = false;
+    faceBox = null;
+    faceMisses = 0;
+
+    // interface
+    currentPropTab = 'filter';
+    renderTabs();
     loadProps();
     updateSummary();
+    updateAccessoryControls();
+    updateEffectControls();
     updateDistortControls();
-    updateWishiControls();                  // also refreshes the Acabado settings panel
-    updateStatus('Filtros quitados y ajustes por defecto');
+    updateWishiControls();                  // also rebuilds the Acabado settings panel
+    document.getElementById('propsGrid').scrollTop = 0;
+    updateStatus(stream ? 'Cámara lista. ¡Elige tus accesorios!' : 'Listo para empezar');
 }
 
 function updateSummary() {
