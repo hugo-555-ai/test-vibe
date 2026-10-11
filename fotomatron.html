@@ -3,108 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📸 Super Fotomatón Divertido</title>
-    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <title>Fotomatón - 5 Fotos</title>
     <style>
         :root {
             --primary: #ff6b6b;
             --secondary: #4ecdc4;
             --accent: #ffe66d;
-            --dark: #292f36;
+            --dark: #1a1a2e;
             --light: #f7fff7;
-            --fun-pink: #ff9ff3;
-            --fun-blue: #54a0ff;
-            --fun-purple: #a55eea;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Comic Neue', cursive, sans-serif;
-            background: linear-gradient(135deg, var(--dark) 0%, #1a1a2e 50%, var(--dark) 100%);
+            background: linear-gradient(135deg, var(--dark) 0%, #292f36 100%);
             min-height: 100vh;
             color: var(--light);
-            overflow-x: hidden;
-            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(84, 160, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 50% 50%, rgba(165, 94, 234, 0.05) 0%, transparent 30%);
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
         header {
             text-align: center;
             padding: 20px 0;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-            border-radius: 0 0 20px 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            animation: rainbowBorder 8s linear infinite;
-        }
-
-        @keyframes rainbowBorder {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
-        }
-
-        h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3); color: white; }
-        .subtitle { font-size: 1.2em; color: rgba(255, 255, 255, 0.9); margin-bottom: 10px; }
-        .tagline { font-style: italic; color: var(--accent); font-size: 1.1em; }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        @media (max-width: 900px) {
-            .main-content { grid-template-columns: 1fr; }
-        }
-
-        /* Camera Section */
-        .camera-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .camera-section:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .camera-section h2 {
-            text-align: center;
             margin-bottom: 20px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
             color: var(--accent);
-            font-size: 1.5em;
-            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
         }
 
         .camera-container {
             position: relative;
             width: 100%;
+            max-width: 800px;
             aspect-ratio: 4/3;
             background: #000;
             border-radius: 15px;
             overflow: hidden;
             margin-bottom: 20px;
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         }
 
         .camera-container video {
@@ -124,35 +75,45 @@
         .camera-frame {
             position: absolute;
             top: 10px; left: 10px; right: 10px; bottom: 10px;
-            border: 3px dashed var(--accent);
+            border: 2px dashed var(--accent);
             border-radius: 10px;
             pointer-events: none;
-            animation: pulse 2s ease-in-out infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.01); }
-        }
-
-        .camera-corner {
-            position: absolute;
-            width: 30px; height: 30px;
-            border: 3px solid var(--accent);
-            border-radius: 50%;
-            background: var(--dark);
-            pointer-events: none;
-        }
-        .camera-corner.tl { top: 15px; left: 15px; }
-        .camera-corner.tr { top: 15px; right: 15px; }
-        .camera-corner.bl { bottom: 15px; left: 15px; }
-        .camera-corner.br { bottom: 15px; right: 15px; }
-
-        .camera-controls {
+        .controls-section {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
             flex-wrap: wrap;
+        }
+
+        .time-display {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            padding: 10px 15px;
+            text-align: center;
+            min-width: 100px;
+            backdrop-filter: blur(10px);
+        }
+
+        .time-display h3 {
+            font-size: 0.8em;
+            color: var(--accent);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .time-display .value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--light);
+            text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
         }
 
         .btn {
@@ -166,36 +127,14 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-primary {
+            min-width: 140px;
             background: linear-gradient(135deg, var(--primary), #ff8e8e);
             color: white;
         }
-        .btn-primary:hover:not(:disabled) {
+
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-            background: linear-gradient(135deg, #ff8e8e, var(--primary));
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, var(--secondary), #6ed3d3);
-            color: white;
-        }
-        .btn-secondary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(84, 160, 255, 0.4);
-            background: linear-gradient(135deg, #6ed3d3, var(--secondary));
-        }
-
-        .btn-accent {
-            background: linear-gradient(135deg, var(--accent), #ffed86);
-            color: var(--dark);
-        }
-        .btn-accent:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 230, 109, 0.4);
-            background: linear-gradient(135deg, #ffed86, var(--accent));
         }
 
         .btn:disabled {
@@ -204,256 +143,65 @@
             transform: none;
         }
 
-        .btn:active:not(:disabled) { transform: translateY(1px); }
-
-        /* Settings Section */
-        .settings-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+        .btn:active:not(:disabled) {
+            transform: translateY(1px);
         }
 
-        .settings-section h2 {
+        .status-bar {
             text-align: center;
-            margin-bottom: 20px;
-            color: var(--secondary);
-            font-size: 1.5em;
-        }
-
-        .settings-grid { display: grid; gap: 20px; }
-
-        .setting-item {
-            background: rgba(0, 0, 0, 0.2);
             padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 12px;
+            margin-bottom: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 800px;
+            width: 100%;
         }
 
-        .setting-item label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
+        .status-bar .status-text {
             color: var(--accent);
+            font-weight: bold;
             font-size: 1.1em;
         }
 
-        .setting-item .description {
-            font-size: 0.9em;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 10px;
-            font-style: italic;
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .slider-container input[type="range"] {
-            flex: 1;
-            height: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .slider-container input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 24px; height: 24px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(255, 230, 109, 0.5);
-        }
-
-        .slider-value {
-            min-width: 50px;
-            text-align: center;
+        .countdown-display {
+            font-size: 4em;
             font-weight: bold;
             color: var(--primary);
-            font-size: 1.2em;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 5px 10px;
-            border-radius: 8px;
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+            animation: bounce 1s ease infinite;
+            margin: 20px 0;
         }
 
-        .photo-count-selector {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .photo-option {
-            width: 60px; height: 60px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.1);
-            font-size: 1.5em;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .photo-option:hover {
-            border-color: var(--accent);
-            background: rgba(255, 230, 109, 0.2);
-            transform: scale(1.05);
-        }
-
-        .photo-option.selected {
-            border-color: var(--accent);
-            background: var(--accent);
-            color: var(--dark);
-            box-shadow: 0 0 20px rgba(255, 230, 109, 0.5);
-        }
-
-        /* Props Section */
-        .props-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 30px;
-        }
-
-        .props-section h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: var(--fun-pink);
-            font-size: 1.5em;
-        }
-
-        .props-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .prop-tab {
-            padding: 10px 20px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            background: transparent;
-            color: rgba(255, 255, 255, 0.7);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-        }
-
-        .prop-tab:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: rgba(255, 230, 109, 0.1);
-        }
-
-        .prop-tab.active {
-            border-color: var(--accent);
-            color: var(--dark);
-            background: var(--accent);
-        }
-
-        .props-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 15px;
-        }
-
-        .prop-item {
-            aspect-ratio: 1;
-            border: 3px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.1);
-            overflow: hidden;
-            position: relative;
-        }
-
-        .prop-item:hover {
-            border-color: var(--accent);
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(255, 230, 109, 0.3);
-        }
-
-        .prop-item.selected {
-            border-color: var(--fun-pink);
-            box-shadow: 0 0 25px rgba(255, 159, 243, 0.6);
-            transform: scale(1.02);
-        }
-
-        .prop-item .prop-emoji {
-            font-size: 2.5em;
-            text-align: center;
-            line-height: 100%;
-            padding: 20px 0;
-        }
-
-        .prop-item .prop-name {
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 5px;
-            text-align: center;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: white;
-        }
-
-        /* Gallery Section */
-        .gallery-section {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .gallery-section h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: var(--fun-blue);
-            font-size: 1.5em;
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .photo-strip-container {
             display: flex;
             justify-content: center;
             margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            border: 2px dashed var(--fun-pink);
-            min-height: 200px;
+            width: 100%;
+            max-width: 800px;
         }
 
         .photo-strip {
             display: flex;
+            flex-direction: column;
             gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid var(--secondary);
         }
 
         .photo-slot {
-            width: 150px;
-            height: 200px;
+            width: 100%;
+            aspect-ratio: 4/3;
             background: rgba(255, 255, 255, 0.05);
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -474,48 +222,34 @@
         }
 
         .photo-slot.filled {
-            border-style: solid;
             border-color: var(--secondary);
             background: rgba(84, 160, 255, 0.1);
         }
 
-        .gallery-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
+        .confetti-container {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
         }
 
-        /* Status and Messages */
-        .status-bar {
-            text-align: center;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .confetti-container.active { display: block; }
+
+        .confetti {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: confettiFall 3s linear forwards;
         }
 
-        .status-bar .status-text {
-            color: var(--accent);
-            font-weight: bold;
-            font-size: 1.1em;
+        @keyframes confettiFall {
+            0% { opacity: 1; transform: translateY(-100px) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
         }
 
-        .countdown-display {
-            font-size: 3em;
-            font-weight: bold;
-            color: var(--primary);
-            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
-            animation: bounce 1s ease infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        /* Error Modal */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -550,198 +284,180 @@
         .modal p { margin-bottom: 25px; color: rgba(255, 255, 255, 0.9); line-height: 1.6; }
         .modal-actions { display: flex; justify-content: center; gap: 15px; }
 
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px; height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--accent);
-            animation: spin 1s linear infinite;
+        .props-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Confetti Effect */
-        .confetti-container {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            z-index: 999;
-            display: none;
+        .props-section h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            font-size: 1.3em;
         }
 
-        .confetti-container.active { display: block; }
+        .props-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
 
-        .confetti {
-            position: absolute;
-            width: 10px; height: 10px;
+        .prop-tab {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .prop-tab:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255, 230, 109, 0.1);
+        }
+
+        .prop-tab.active {
+            border-color: var(--accent);
+            color: var(--dark);
             background: var(--accent);
-            border-radius: 50%;
-            opacity: 0;
-            animation: confettiFall 3s linear forwards;
         }
 
-        @keyframes confettiFall {
-            0% { opacity: 1; transform: translateY(-100px) rotate(0deg); }
-            100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+        .props-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
         }
 
-        /* Floating Decorations */
-        .floating-emoji {
-            position: fixed;
+        .prop-item {
+            aspect-ratio: 1;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prop-item:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 230, 109, 0.3);
+        }
+
+        .prop-item.selected {
+            border-color: var(--secondary);
+            box-shadow: 0 0 20px rgba(84, 160, 255, 0.5);
+            transform: scale(1.02);
+        }
+
+        .prop-item .prop-emoji {
             font-size: 2em;
-            opacity: 0.3;
-            animation: float 6s ease-in-out infinite;
-            pointer-events: none;
-            z-index: -1;
+            text-align: center;
+            line-height: 100%;
+            padding: 20px 0;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(10deg); }
+        .prop-item .prop-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 3px;
+            text-align: center;
+            font-size: 0.7em;
+            font-weight: bold;
+            color: white;
         }
 
-        .floating-emoji:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
-        .floating-emoji:nth-child(2) { top: 20%; right: 10%; animation-delay: 1s; }
-        .floating-emoji:nth-child(3) { top: 60%; left: 15%; animation-delay: 2s; }
-        .floating-emoji:nth-child(4) { top: 70%; right: 5%; animation-delay: 3s; }
-        .floating-emoji:nth-child(5) { top: 30%; left: 80%; animation-delay: 4s; }
-
-        /* Responsive */
         @media (max-width: 600px) {
-            .container { padding: 10px; }
-            h1 { font-size: 1.8em; }
-            .main-content { grid-template-columns: 1fr; }
-            .camera-container { aspect-ratio: 1; }
-            .photo-option { width: 50px; height: 50px; font-size: 1.2em; }
-            .photo-slot { width: 100px; height: 130px; }
-            .countdown-display { font-size: 2em; }
+            h1 { font-size: 1.5em; }
+            .camera-container { max-width: 100%; }
+            .controls-section { flex-direction: column; }
+            .time-display { min-width: auto; width: 100%; }
+            .countdown-display { font-size: 2.5em; }
         }
     </style>
 </head>
 <body>
-    <!-- Floating Decorations -->
-    <div class="floating-emoji">📸</div>
-    <div class="floating-emoji">🎭</div>
-    <div class="floating-emoji">✨</div>
-    <div class="floating-emoji">🎉</div>
-    <div class="floating-emoji">😎</div>
-
-    <!-- Confetti Container -->
     <div class="confetti-container" id="confettiContainer"></div>
 
-    <!-- Error Modal -->
     <div class="modal-overlay" id="errorModal">
         <div class="modal">
-            <h3>⚠️ Error de Cámara</h3>
-            <p id="errorMessage">No se pudo acceder a la cámara. Por favor, verifica los permisos.</p>
+            <h3>Error de Camara</h3>
+            <p id="errorMessage">No se pudo acceder a la camara.</p>
             <div class="modal-actions">
-                <button class="btn btn-primary" onclick="closeErrorModal()">Reintentar</button>
-                <button class="btn btn-secondary" onclick="closeErrorModal()">Cerrar</button>
+                <button class="btn" onclick="closeErrorModal()">Reintentar</button>
+                <button class="btn" onclick="closeErrorModal()">Cerrar</button>
             </div>
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <h1>📸 Super Fotomatón Divertido</h1>
-            <div class="subtitle">¡Crea recuerdos épicos!</div>
-            <div class="tagline">Elige tu estilo, sonríe y... ¡CLICK!</div>
-        </header>
+    <header>
+        <h1>Fotomatón</h1>
+        <div class="subtitle">5 fotos automaticas</div>
+    </header>
 
-        <div class="main-content">
-            <!-- Camera Section -->
-            <section class="camera-section">
-                <h2>🎥 Cámara</h2>
-                <div class="camera-container">
-                    <video id="cameraView" autoplay playsinline></video>
-                    <div class="camera-overlay"></div>
-                    <div class="camera-frame"></div>
-                    <div class="camera-corner tl"></div>
-                    <div class="camera-corner tr"></div>
-                    <div class="camera-corner bl"></div>
-                    <div class="camera-corner br"></div>
-                    <canvas id="compositeCanvas" style="display: none;"></canvas>
-                </div>
-                <div class="camera-controls">
-                    <button class="btn btn-primary" id="startBtn" onclick="startPhotoBooth()">
-                        <span id="startBtnText">🚀 Empezar Sesión</span>
-                        <span id="startBtnLoading" style="display: none;"><span class="loading"></span></span>
-                    </button>
-                    <button class="btn btn-accent" id="takePhotoBtn" onclick="takePhoto()" disabled>📸 Tomar Foto</button>
-                    <button class="btn btn-secondary" id="stopBtn" onclick="stopPhotoBooth()" disabled>⏹️ Detener</button>
-                </div>
-                <div class="status-bar">
-                    <span class="status-text" id="statusText">Listo para empezar</span>
-                    <div class="countdown-display" id="countdownDisplay" style="display: none;"></div>
-                </div>
-            </section>
+    <div class="camera-container">
+        <video id="cameraView" autoplay playsinline></video>
+        <div class="camera-overlay"></div>
+        <div class="camera-frame"></div>
+        <canvas id="compositeCanvas" style="display: none;"></canvas>
+    </div>
 
-            <!-- Settings Section -->
-            <section class="settings-section">
-                <h2>⚙️ Configuración</h2>
-                <div class="settings-grid">
-                    <div class="setting-item">
-                        <label>Número de Fotos</label>
-                        <div class="description">Elige cuántas fotos (1-4)</div>
-                        <div class="photo-count-selector" id="photoCountSelector">
-                            <div class="photo-option" data-count="1" onclick="selectPhotoCount(1)">1</div>
-                            <div class="photo-option" data-count="2" onclick="selectPhotoCount(2)">2</div>
-                            <div class="photo-option selected" data-count="4" onclick="selectPhotoCount(4)">4</div>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>Tiempo entre Fotos</label>
-                        <div class="description">Segundos para posar</div>
-                        <div class="slider-container">
-                            <input type="range" id="timeBetweenPhotos" min="2" max="10" value="3" oninput="updateTimeBetweenPhotos(this.value)">
-                            <span class="slider-value" id="timeBetweenPhotosValue">3s</span>
-                        </div>
-                    </div>
-
-                    <div class="setting-item">
-                        <label>Tiempo de Cuenta Atrás</label>
-                        <div class="description">Segundos para prepararse</div>
-                        <div class="slider-container">
-                            <input type="range" id="countdownTime" min="2" max="10" value="3" oninput="updateCountdownTime(this.value)">
-                            <span class="slider-value" id="countdownTimeValue">3s</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+    <div class="controls-section">
+        <div class="time-display">
+            <h3>Tiempo entre fotos</h3>
+            <div class="value" id="timeBetweenValue">3s</div>
         </div>
+        <button class="btn" id="startBtn" onclick="startPhotoBooth()">
+            <span id="startBtnText">Empezar</span>
+        </button>
+        <div class="time-display">
+            <h3>Tiempo primera foto</h3>
+            <div class="value" id="countdownValue">3s</div>
+        </div>
+    </div>
 
-        <!-- Props Section -->
-        <section class="props-section">
-            <h2>🎭 Accesorios y Fondos</h2>
-            <div class="props-tabs">
-                <button class="prop-tab active" onclick="switchPropTab('filters')">Filtros</button>
-                <button class="prop-tab" onclick="switchPropTab('hats')">Sombreros</button>
-                <button class="prop-tab" onclick="switchPropTab('glasses')">Gafas</button>
-                <button class="prop-tab" onclick="switchPropTab('backgrounds')">Fondos</button>
-                <button class="prop-tab" onclick="switchPropTab('effects')">Efectos</button>
-            </div>
-            <div class="props-grid" id="propsGrid"></div>
-        </section>
+    <div class="status-bar">
+        <span class="status-text" id="statusText">Listo para empezar</span>
+        <div class="countdown-display" id="countdownDisplay" style="display: none;"></div>
+    </div>
 
-        <!-- Gallery Section -->
-        <section class="gallery-section">
-            <h2>🖼️ Tu Tira de Fotos</h2>
-            <div class="photo-strip-container">
-                <div class="photo-strip" id="photoStrip"></div>
-            </div>
-            <div class="gallery-actions">
-                <button class="btn btn-accent" onclick="clearPhotos()">🗑️ Limpiar</button>
-                <button class="btn btn-primary" onclick="downloadPhotoStrip()" id="downloadBtn" disabled>💾 Descargar Tira</button>
-                <button class="btn btn-secondary" onclick="sharePhotoStrip()" id="shareBtn" disabled>📤 Compartir</button>
-            </div>
-        </section>
+    <div class="photo-strip-container">
+        <div class="photo-strip" id="photoStrip"></div>
+    </div>
+
+    <div class="props-section">
+        <h2>Accesorios</h2>
+        <div class="props-tabs">
+            <button class="prop-tab active" onclick="switchPropTab('filters')">Filtros</button>
+            <button class="prop-tab" onclick="switchPropTab('hats')">Sombreros</button>
+            <button class="prop-tab" onclick="switchPropTab('glasses')">Gafas</button>
+            <button class="prop-tab" onclick="switchPropTab('backgrounds')">Fondos</button>
+            <button class="prop-tab" onclick="switchPropTab('effects')">Efectos</button>
+        </div>
+        <div class="props-grid" id="propsGrid"></div>
     </div>
 
     <script>
-// ===== Global State =====
+// ===== Configuration =====
+const PHOTO_COUNT = 5;
+const TIME_BETWEEN_PHOTOS = 3;
+const COUNTDOWN_TIME = 3;
+
 // ===== Global State =====
 let stream = null;
 let cameraView = null;
@@ -749,30 +465,20 @@ let compositeCanvas = null;
 let compositeCtx = null;
 let photos = [];
 let currentPhotoIndex = 0;
-let photoCount = 4;
-let timeBetweenPhotos = 3;
-let countdownTime = 3;
 let isSessionRunning = false;
 let isCountingDown = false;
 let countdownTimeout = null;
 let photoTimeout = null;
-let selectedProps = {
-    filter: null,
-    hat: null,
-    glasses: null,
-    background: null,
-    effect: null
-};
+let selectedProps = { filter: null, hat: null, glasses: null, background: null, effect: null };
 let currentPropTab = 'filters';
 
-// Prop definitions
+// ===== Prop Definitions =====
 const propsData = {
     filters: [
         { id: 'none', name: 'Normal', emoji: '\ud83d\udcf8', type: 'filter' },
         { id: 'sepia', name: 'Sepia', emoji: '\ud83d\udf8a', type: 'filter' },
         { id: 'grayscale', name: 'B/N', emoji: '\u26aa', type: 'filter' },
         { id: 'invert', name: 'Negativo', emoji: '\ud83d\udd33', type: 'filter' },
-        { id: 'blur', name: 'Desenfocado', emoji: '\ud83c\udf2b\ufe0f', type: 'filter' },
         { id: 'vintage', name: 'Vintage', emoji: '\ud83d\udcfc', type: 'filter' },
         { id: 'warm', name: 'Calido', emoji: '\ud83d\udd25', type: 'filter' },
         { id: 'cool', name: 'Frio', emoji: '\u2744\ufe0f', type: 'filter' }
@@ -783,53 +489,29 @@ const propsData = {
         { id: 'santa', name: 'Santa', emoji: '\ud83c\udf85', type: 'hat' },
         { id: 'party', name: 'Fiesta', emoji: '\ud83c\udf89', type: 'hat' },
         { id: 'chef', name: 'Chef', emoji: '\ud83d\udc69\u200d\ud83c\udf73', type: 'hat' },
-        { id: 'pirate', name: 'Pirata', emoji: '\u2620\ufe0f', type: 'hat' },
-        { id: 'graduation', name: 'Graduacion', emoji: '\ud83c\udf93\ufe0f', type: 'hat' },
-        { id: 'witch', name: 'Bruja', emoji: '\ud83e\uddda', type: 'hat' }
+        { id: 'pirate', name: 'Pirata', emoji: '\u2620\ufe0f', type: 'hat' }
     ],
     glasses: [
-        { id: 'sunglasses', name: 'Gafas de Sol', emoji: '\ud83d\ude0e', type: 'glasses' },
+        { id: 'sunglasses', name: 'Sol', emoji: '\ud83d\ude0e', type: 'glasses' },
         { id: 'nerd', name: 'Nerd', emoji: '\ud83d\udc53', type: 'glasses' },
         { id: 'heart', name: 'Corazones', emoji: '\ud83d\udc95', type: 'glasses' },
-        { id: 'star', name: 'Estrellas', emoji: '\u2b50', type: 'glasses' },
-        { id: '3d', name: '3D', emoji: '\ud83d\udc53', type: 'glasses' },
-        { id: 'monocle', name: 'Monoculo', emoji: '\ud83e\udd30', type: 'glasses' },
-        { id: 'swim', name: 'Natacion', emoji: '\ud83c\udfca', type: 'glasses' },
-        { id: 'vr', name: 'VR', emoji: '\ud83d\uddfa\ufe0f', type: 'glasses' }
+        { id: 'star', name: 'Estrellas', emoji: '\u2b50', type: 'glasses' }
     ],
     backgrounds: [
         { id: 'none', name: 'Ninguno', emoji: '\u2b1c', type: 'background' },
         { id: 'beach', name: 'Playa', emoji: '\ud83c\udf76\ufe0f', type: 'background' },
         { id: 'space', name: 'Espacio', emoji: '\ud83d\ude80', type: 'background' },
-        { id: 'city', name: 'Ciudad', emoji: '\ud83c\udf99\ufe0f', type: 'background' },
-        { id: 'forest', name: 'Bosque', emoji: '\ud83c\udf33', type: 'background' },
-        { id: 'sunset', name: 'Atardecer', emoji: '\ud83c\udf05', type: 'background' },
-        { id: 'party', name: 'Fiesta', emoji: '\ud83c\udf82', type: 'background' },
-        { id: 'winter', name: 'Invierno', emoji: '\u2744\ufe0f', type: 'background' }
+        { id: 'city', name: 'Ciudad', emoji: '\ud83c\udf99\ufe0f', type: 'background' }
     ],
     effects: [
         { id: 'none', name: 'Ninguno', emoji: '\u2728', type: 'effect' },
         { id: 'bokeh', name: 'Bokeh', emoji: '\ud83d\udcab', type: 'effect' },
         { id: 'sparkles', name: 'Destellos', emoji: '\u2728', type: 'effect' },
-        { id: 'hearts', name: 'Corazones', emoji: '\ud83d\udc96', type: 'effect' },
-        { id: 'stars', name: 'Estrellas', emoji: '\ud83c\udf1f', type: 'effect' },
-        { id: 'bubbles', name: 'Burbujas', emoji: '\ud83e\uddf7', type: 'effect' },
-        { id: 'fireworks', name: 'Fuegos', emoji: '\ud83c\udf86', type: 'effect' },
-        { id: 'glitch', name: 'Glitch', emoji: '\ud83d\udcfa', type: 'effect' }
+        { id: 'hearts', name: 'Corazones', emoji: '\ud83d\udc96', type: 'effect' }
     ]
 };
 
-// Background colors for different backgrounds
-const backgroundColors = {
-    none: '#000000',
-    beach: '#87CEEB',
-    space: '#000000',
-    city: '#2F4F4F',
-    forest: '#228B22',
-    sunset: '#FF8C00',
-    party: '#FF69B4',
-    winter: '#E0F6FF'
-};
+const backgroundColors = { none: '#000000', beach: '#87CEEB', space: '#000000', city: '#2F4F4F' };
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', function() {
@@ -845,60 +527,43 @@ document.addEventListener('DOMContentLoaded', function() {
 async function initializeCamera() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
             audio: false
         });
         cameraView.srcObject = stream;
         updateStatus('Camara lista');
     } catch (error) {
-        showErrorModal('No se pudo acceder a la camara: ' + error.message);
+        showErrorModal('Error: ' + error.message);
     }
 }
 
 function stopCamera() {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
+    if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
 }
 
 // ===== Photo Booth Functions =====
 function startPhotoBooth() {
-    if (!stream) {
-        showErrorModal('Camara no disponible.');
-        return;
-    }
+    if (!stream) { showErrorModal('Camara no disponible.'); return; }
     if (isSessionRunning) return;
-    isSessionRunning = true;
-    photos = [];
-    currentPhotoIndex = 0;
+    isSessionRunning = true; photos = []; currentPhotoIndex = 0;
     updateStatus('Preparate!');
     document.getElementById('startBtn').disabled = true;
-    document.getElementById('takePhotoBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = false;
     startCountdown();
 }
 
 function startCountdown() {
     if (isCountingDown) return;
-    isCountingDown = true;
-    let countdown = countdownTime;
+    isCountingDown = true; let countdown = COUNTDOWN_TIME;
     const countdownDisplay = document.getElementById('countdownDisplay');
     const statusText = document.getElementById('statusText');
-    countdownDisplay.style.display = 'block';
-    statusText.style.display = 'none';
+    countdownDisplay.style.display = 'block'; statusText.style.display = 'none';
     function updateCountdown() {
         countdownDisplay.textContent = countdown;
         if (countdown <= 0) {
-            countdownDisplay.style.display = 'none';
-            statusText.style.display = 'block';
-            updateStatus('Sonrie!');
-            isCountingDown = false;
-            takePhoto();
-            return;
+            countdownDisplay.style.display = 'none'; statusText.style.display = 'block';
+            updateStatus('Sonrie!'); isCountingDown = false; takePhoto(); return;
         }
-        countdown--;
-        countdownTimeout = setTimeout(updateCountdown, 1000);
+        countdown--; countdownTimeout = setTimeout(updateCountdown, 1000);
     }
     updateCountdown();
 }
@@ -908,15 +573,9 @@ function takePhoto() {
     playShutterSound();
     capturePhoto().then(() => {
         currentPhotoIndex++;
-        if (currentPhotoIndex >= photoCount) {
-            endPhotoSession();
-            return;
-        }
-        updateStatus(`Foto ${currentPhotoIndex}/${photoCount}. Siguiente en ${timeBetweenPhotos}s...`);
-        photoTimeout = setTimeout(() => {
-            playBeepSound();
-            takePhoto();
-        }, timeBetweenPhotos * 1000);
+        if (currentPhotoIndex >= PHOTO_COUNT) { endPhotoSession(); return; }
+        updateStatus(`Foto ${currentPhotoIndex}/${PHOTO_COUNT}. Siguiente en ${TIME_BETWEEN_PHOTOS}s...`);
+        photoTimeout = setTimeout(() => { playBeepSound(); takePhoto(); }, TIME_BETWEEN_PHOTOS * 1000);
     });
 }
 
@@ -926,41 +585,27 @@ async function capturePhoto() {
         const tempCtx = tempCanvas.getContext('2d');
         const videoWidth = cameraView.videoWidth;
         const videoHeight = cameraView.videoHeight;
-        tempCanvas.width = videoWidth;
-        tempCanvas.height = videoHeight;
+        tempCanvas.width = videoWidth; tempCanvas.height = videoHeight;
         tempCtx.drawImage(cameraView, 0, 0, videoWidth, videoHeight);
         applyPropsToImage(tempCanvas, tempCtx);
         tempCanvas.toBlob((blob) => {
             const photoUrl = URL.createObjectURL(blob);
-            photos.push(photoUrl);
-            updatePhotoStrip();
-            triggerConfetti();
-            resolve();
+            photos.push(photoUrl); updatePhotoStrip(); triggerConfetti(); resolve();
         }, 'image/jpeg', 0.92);
     });
 }
 
 function applyPropsToImage(canvas, ctx) {
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = canvas.width; const height = canvas.height;
     if (selectedProps.background && selectedProps.background !== 'none') {
-        const bgColor = backgroundColors[selectedProps.background] || '#000000';
-        ctx.fillStyle = bgColor;
+        ctx.fillStyle = backgroundColors[selectedProps.background] || '#000000';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(cameraView, 0, 0, width, height);
     }
-    if (selectedProps.filter && selectedProps.filter !== 'none') {
-        applyFilter(ctx, width, height, selectedProps.filter);
-    }
-    if (selectedProps.hat && selectedProps.hat !== 'none') {
-        applyHat(ctx, width, height, selectedProps.hat);
-    }
-    if (selectedProps.glasses && selectedProps.glasses !== 'none') {
-        applyGlasses(ctx, width, height, selectedProps.glasses);
-    }
-    if (selectedProps.effect && selectedProps.effect !== 'none') {
-        applyEffect(ctx, width, height, selectedProps.effect);
-    }
+    if (selectedProps.filter && selectedProps.filter !== 'none') applyFilter(ctx, width, height, selectedProps.filter);
+    if (selectedProps.hat && selectedProps.hat !== 'none') applyHat(ctx, width, height, selectedProps.hat);
+    if (selectedProps.glasses && selectedProps.glasses !== 'none') applyGlasses(ctx, width, height, selectedProps.glasses);
+    if (selectedProps.effect && selectedProps.effect !== 'none') applyEffect(ctx, width, height, selectedProps.effect);
 }
 
 function endPhotoSession() {
@@ -968,15 +613,8 @@ function endPhotoSession() {
     if (countdownTimeout) clearTimeout(countdownTimeout);
     if (photoTimeout) clearTimeout(photoTimeout);
     document.getElementById('startBtn').disabled = false;
-    document.getElementById('takePhotoBtn').disabled = true;
-    document.getElementById('stopBtn').disabled = true;
-    updateStatus('Sesion completada!');
-    if (photos.length > 0) {
-        document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('shareBtn').disabled = false;
-    }
-    triggerConfetti();
-    playCelebrationSound();
+    updateStatus('Procesando fotos...');
+    setTimeout(() => { downloadPhotoStrip(); }, 500);
 }
 
 function stopPhotoBooth() {
@@ -984,10 +622,7 @@ function stopPhotoBooth() {
     isSessionRunning = false;
     if (countdownTimeout) clearTimeout(countdownTimeout);
     if (photoTimeout) clearTimeout(photoTimeout);
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('takePhotoBtn').disabled = true;
-    document.getElementById('stopBtn').disabled = true;
-    updateStatus('Sesion detenida');
+    document.getElementById('startBtn').disabled = false; updateStatus('Sesion detenida');
 }
 
 // ===== Filter Functions =====
@@ -1001,25 +636,19 @@ function applyFilter(ctx, width, height, filterId) {
                 data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
                 data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
                 data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
-            }
-            break;
+            } break;
         case 'grayscale':
             for (let i = 0; i < data.length; i += 4) {
                 const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
                 data[i] = data[i + 1] = data[i + 2] = avg;
-            }
-            break;
+            } break;
         case 'invert':
             for (let i = 0; i < data.length; i += 4) {
-                data[i] = 255 - data[i];
-                data[i + 1] = 255 - data[i + 1];
-                data[i + 2] = 255 - data[i + 2];
-            }
-            break;
+                data[i] = 255 - data[i]; data[i + 1] = 255 - data[i + 1]; data[i + 2] = 255 - data[i + 2];
+            } break;
         case 'vintage':
             for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, data[i] * 1.1);
-                data[i + 1] = Math.min(255, data[i + 1] * 0.9);
+                data[i] = Math.min(255, data[i] * 1.1); data[i + 1] = Math.min(255, data[i + 1] * 0.9);
                 data[i + 2] = Math.min(255, data[i + 2] * 0.8);
             }
             for (let i = 0; i < data.length; i += 4) {
@@ -1027,27 +656,22 @@ function applyFilter(ctx, width, height, filterId) {
                 data[i] = Math.max(0, Math.min(255, data[i] + noise));
                 data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
                 data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
-            }
-            break;
+            } break;
         case 'warm':
             for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, data[i] * 1.1);
-                data[i + 1] = Math.min(255, data[i + 1] * 0.95);
+                data[i] = Math.min(255, data[i] * 1.1); data[i + 1] = Math.min(255, data[i + 1] * 0.95);
                 data[i + 2] = Math.min(255, data[i + 2] * 0.85);
-            }
-            break;
+            } break;
         case 'cool':
             for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, data[i] * 0.85);
-                data[i + 1] = Math.min(255, data[i + 1] * 0.95);
+                data[i] = Math.min(255, data[i] * 0.85); data[i + 1] = Math.min(255, data[i + 1] * 0.95);
                 data[i + 2] = Math.min(255, data[i + 2] * 1.1);
-            }
-            break;
+            } break;
     }
     ctx.putImageData(imageData, 0, 0);
 }
 
-// ===== Hat Drawing Functions =====
+// ===== Hat Drawing =====
 function applyHat(ctx, width, height, hatId) {
     const hatSize = Math.min(width, height) * 0.3;
     const x = width / 2 - hatSize / 2;
@@ -1056,292 +680,68 @@ function applyHat(ctx, width, height, hatId) {
     switch (hatId) {
         case 'cowboy':
             ctx.fillStyle = '#8B4513';
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 1.5, hatSize / 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x + hatSize / 2, y + hatSize / 4);
-            ctx.lineTo(x + hatSize / 2, y + hatSize / 2);
-            ctx.stroke();
-            break;
+            ctx.beginPath(); ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 1.5, hatSize / 8, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + hatSize / 2, y + hatSize / 4); ctx.lineTo(x + hatSize / 2, y + hatSize / 2); ctx.stroke(); break;
         case 'crown':
-            ctx.fillStyle = '#FFD700';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            ctx.fillStyle = '#FFD700'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             for (let i = 0; i < 5; i++) {
                 const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
-                const pointX = x + hatSize / 2 + Math.cos(angle) * hatSize / 2;
-                const pointY = y + hatSize / 2 + Math.sin(angle) * hatSize / 4;
-                ctx.beginPath();
-                ctx.moveTo(pointX, pointY);
-                ctx.lineTo(pointX + Math.cos(angle) * hatSize / 4, pointY + Math.sin(angle) * hatSize / 4);
-                ctx.lineTo(pointX + Math.cos(angle + 0.2) * hatSize / 6, pointY + Math.sin(angle + 0.2) * hatSize / 6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-            }
-            break;
+                const pX = x + hatSize / 2 + Math.cos(angle) * hatSize / 2; const pY = y + hatSize / 2 + Math.sin(angle) * hatSize / 4;
+                ctx.beginPath(); ctx.moveTo(pX, pY); ctx.lineTo(pX + Math.cos(angle) * hatSize / 4, pY + Math.sin(angle) * hatSize / 4);
+                ctx.lineTo(pX + Math.cos(angle + 0.2) * hatSize / 6, pY + Math.sin(angle + 0.2) * hatSize / 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+            } break;
         case 'santa':
-            ctx.fillStyle = '#FF0000';
-            ctx.strokeStyle = '#FFF';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x, y + hatSize / 2);
-            ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize, y + hatSize / 2);
-            ctx.lineTo(x, y + hatSize / 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.strokeStyle = '#FFF';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(x, y + hatSize / 2);
-            ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize, y + hatSize / 2);
-            ctx.stroke();
-            ctx.fillStyle = '#FFF';
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize, y + hatSize / 2, hatSize / 8, hatSize / 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            break;
+            ctx.fillStyle = '#FF0000'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(x, y + hatSize / 2); ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize, y + hatSize / 2); ctx.lineTo(x, y + hatSize / 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.strokeStyle = '#FFF'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x, y + hatSize / 2); ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize, y + hatSize / 2); ctx.stroke();
+            ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(x + hatSize, y + hatSize / 2, hatSize / 8, hatSize / 8, 0, 0, Math.PI * 2); ctx.fill(); break;
         case 'party':
-            ctx.fillStyle = getRandomColor();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x + hatSize / 2, y);
-            ctx.lineTo(x, y + hatSize);
-            ctx.lineTo(x + hatSize, y + hatSize);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            break;
+            ctx.fillStyle = getRandomColor(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(x + hatSize / 2, y); ctx.lineTo(x, y + hatSize); ctx.lineTo(x + hatSize, y + hatSize); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
         case 'chef':
-            ctx.fillStyle = '#FFF';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 3, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 4, hatSize / 4, hatSize / 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 2, hatSize / 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(x + hatSize / 2, y + hatSize / 4, hatSize / 4, hatSize / 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); break;
         case 'pirate':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x, y + hatSize / 2);
-            ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize / 1.5, y + hatSize / 4);
-            ctx.quadraticCurveTo(x + hatSize / 2, y + hatSize / 2, x, y + hatSize / 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#FFF';
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 3, y + hatSize / 4, hatSize / 10, hatSize / 10, 0, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        case 'graduation':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.rect(x + hatSize / 4, y, hatSize / 2, hatSize / 4);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 4, hatSize / 12, hatSize / 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            break;
-        case 'witch':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#8B0000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x, y + hatSize / 2);
-            ctx.lineTo(x + hatSize / 2, y - hatSize / 4);
-            ctx.lineTo(x + hatSize, y + hatSize / 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(x + hatSize / 2, y + hatSize / 2, hatSize / 1.5, hatSize / 12, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#000'; ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(x, y + hatSize / 2); ctx.quadraticCurveTo(x + hatSize / 2, y - hatSize / 4, x + hatSize / 1.5, y + hatSize / 4);
+            ctx.quadraticCurveTo(x + hatSize / 2, y + hatSize / 2, x, y + hatSize / 2); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(x + hatSize / 3, y + hatSize / 4, hatSize / 10, hatSize / 10, 0, 0, Math.PI * 2); ctx.fill(); break;
     }
     ctx.restore();
 }
 
-// ===== Glasses Drawing Functions =====
+// ===== Glasses Drawing =====
 function applyGlasses(ctx, width, height, glassesId) {
-    const glassesWidth = width * 0.4;
-    const glassesHeight = height * 0.15;
-    const x = width / 2 - glassesWidth / 2;
-    const y = height * 0.4;
+    const gw = width * 0.4; const gh = height * 0.15;
+    const x = width / 2 - gw / 2; const y = height * 0.4;
     ctx.save();
     switch (glassesId) {
         case 'sunglasses':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.rect(x + glassesWidth / 4, y + glassesHeight / 2 - 2, glassesWidth / 2, 4);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x - glassesWidth / 8, y + glassesHeight / 2);
-            ctx.lineTo(x - glassesWidth / 2, y + glassesHeight / 2);
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth + glassesWidth / 8, y + glassesHeight / 2);
-            ctx.lineTo(x + glassesWidth + glassesWidth / 2, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.ellipse(x + gw / 4, y + gh / 2, gw / 4, gh / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(x + gw * 3/4, y + gh / 2, gw / 4, gh / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.rect(x + gw / 4, y + gh / 2 - 2, gw / 2, 4); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x - gw / 8, y + gh / 2); ctx.lineTo(x - gw / 2, y + gh / 2); ctx.lineWidth = 3; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x + gw + gw / 8, y + gh / 2); ctx.lineTo(x + gw + gw / 2, y + gh / 2); ctx.stroke(); break;
         case 'nerd':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 5, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 5, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.rect(x + glassesWidth / 4 + glassesWidth / 5, y + glassesHeight / 2 - 1, glassesWidth / 2 - glassesWidth / 5 * 2, 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x, y + glassesHeight / 2);
-            ctx.lineTo(x - glassesWidth / 3, y + glassesHeight / 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth, y + glassesHeight / 2);
-            ctx.lineTo(x + glassesWidth + glassesWidth / 3, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.ellipse(x + gw / 4, y + gh / 2, gw / 5, gh / 2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(x + gw * 3/4, y + gh / 2, gw / 5, gh / 2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.rect(x + gw / 4 + gw / 5, y + gh / 2 - 1, gw / 2 - gw / 5 * 2, 2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x, y + gh / 2); ctx.lineTo(x - gw / 3, y + gh / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x + gw, y + gh / 2); ctx.lineTo(x + gw + gw / 3, y + gh / 2); ctx.stroke(); break;
         case 'heart':
-            ctx.fillStyle = '#FF69B4';
-            ctx.strokeStyle = '#FF1493';
-            ctx.lineWidth = 3;
-            drawHeart(ctx, x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 5);
-            drawHeart(ctx, x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 5);
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth / 4 + glassesWidth / 10, y + glassesHeight / 2);
-            ctx.quadraticCurveTo(x + glassesWidth / 2, y + glassesHeight / 4, x + glassesWidth * 3/4 - glassesWidth / 10, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#FF69B4'; ctx.strokeStyle = '#FF1493'; ctx.lineWidth = 3;
+            drawHeart(ctx, x + gw / 4, y + gh / 2, gw / 5); drawHeart(ctx, x + gw * 3/4, y + gh / 2, gw / 5);
+            ctx.beginPath(); ctx.moveTo(x + gw / 4 + gw / 10, y + gh / 2);
+            ctx.quadraticCurveTo(x + gw / 2, y + gh / 4, x + gw * 3/4 - gw / 10, y + gh / 2); ctx.stroke(); break;
         case 'star':
-            ctx.fillStyle = '#FFD700';
-            ctx.strokeStyle = '#FFA500';
-            ctx.lineWidth = 2;
-            drawStar(ctx, x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 5, glassesWidth / 8);
-            drawStar(ctx, x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 5, glassesWidth / 8);
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth / 4 + glassesWidth / 6, y + glassesHeight / 2);
-            ctx.lineTo(x + glassesWidth * 3/4 - glassesWidth / 6, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
-        case '3d':
-            ctx.fillStyle = '#FF0000';
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 5, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#0000FF';
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 5, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 5 + 3, glassesHeight / 2 + 3, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 5 + 3, glassesHeight / 2 + 3, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.rect(x + glassesWidth / 4 + glassesWidth / 5, y + glassesHeight / 2 - 2, glassesWidth / 2 - glassesWidth / 5 * 2, 4);
-            ctx.fill();
-            break;
-        case 'monocle':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 2, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth / 2 + glassesWidth / 4, y + glassesHeight / 2);
-            ctx.quadraticCurveTo(x + glassesWidth, y + glassesHeight / 4, x + glassesWidth + glassesWidth / 4, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
-        case 'swim':
-            ctx.fillStyle = 'rgba(0, 100, 200, 0.3)';
-            ctx.strokeStyle = '#0064C8';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.rect(x + glassesWidth / 4 + glassesWidth / 8, y + glassesHeight / 2 - 2, glassesWidth / 2 - glassesWidth / 4, 4);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(x - glassesWidth / 8, y + glassesHeight / 2);
-            ctx.quadraticCurveTo(x - glassesWidth / 2, y - glassesHeight / 2, x + glassesWidth + glassesWidth / 2, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
-        case 'vr':
-            ctx.fillStyle = '#000';
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.rect(x, y, glassesWidth, glassesHeight);
-            ctx.fill();
-            ctx.fillStyle = '#111';
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth / 4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(x + glassesWidth * 3/4, y + glassesHeight / 2, glassesWidth / 4, glassesHeight / 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x, y + glassesHeight / 2);
-            ctx.lineTo(x - glassesWidth / 3, y + glassesHeight / 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + glassesWidth, y + glassesHeight / 2);
-            ctx.lineTo(x + glassesWidth + glassesWidth / 3, y + glassesHeight / 2);
-            ctx.stroke();
-            break;
+            ctx.fillStyle = '#FFD700'; ctx.strokeStyle = '#FFA500'; ctx.lineWidth = 2;
+            drawStar(ctx, x + gw / 4, y + gh / 2, gw / 5, gw / 8); drawStar(ctx, x + gw * 3/4, y + gh / 2, gw / 5, gw / 8);
+            ctx.beginPath(); ctx.moveTo(x + gw / 4 + gw / 6, y + gh / 2); ctx.lineTo(x + gw * 3/4 - gw / 6, y + gh / 2); ctx.stroke(); break;
     }
     ctx.restore();
 }
@@ -1351,172 +751,63 @@ function applyEffect(ctx, width, height, effectId) {
     switch (effectId) {
         case 'bokeh':
             for (let i = 0; i < 10; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const size = Math.random() * 20 + 10;
-                const opacity = Math.random() * 0.3 + 0.1;
+                const x = Math.random() * width; const y = Math.random() * height;
+                const size = Math.random() * 20 + 10; const opacity = Math.random() * 0.3 + 0.1;
                 const color = getRandomPastelColor();
                 ctx.fillStyle = color + Math.floor(opacity * 255).toString(16).padStart(2, '0');
-                ctx.beginPath();
-                ctx.ellipse(x, y, size / 2, size / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            break;
+                ctx.beginPath(); ctx.ellipse(x, y, size / 2, size / 2, 0, 0, Math.PI * 2); ctx.fill();
+            } break;
         case 'sparkles':
             for (let i = 0; i < 15; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const size = Math.random() * 8 + 4;
-                const angle = Math.random() * Math.PI * 2;
-                ctx.fillStyle = '#FFF';
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 1;
+                const x = Math.random() * width; const y = Math.random() * height; const size = Math.random() * 8 + 4; const angle = Math.random() * Math.PI * 2;
+                ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1;
                 ctx.beginPath();
                 for (let j = 0; j < 5; j++) {
-                    const outerRadius = size;
-                    const innerRadius = size / 2;
-                    const outerX = x + Math.cos(angle + j * Math.PI * 2 / 5) * outerRadius;
-                    const outerY = y + Math.sin(angle + j * Math.PI * 2 / 5) * outerRadius;
-                    const innerX = x + Math.cos(angle + (j + 0.5) * Math.PI * 2 / 5) * innerRadius;
-                    const innerY = y + Math.sin(angle + (j + 0.5) * Math.PI * 2 / 5) * innerRadius;
-                    if (j === 0) ctx.moveTo(outerX, outerY);
-                    else ctx.lineTo(outerX, outerY);
-                    ctx.lineTo(innerX, innerY);
+                    const or = size; const ir = size / 2;
+                    const ox = x + Math.cos(angle + j * Math.PI * 2 / 5) * or;
+                    const oy = y + Math.sin(angle + j * Math.PI * 2 / 5) * or;
+                    const ix = x + Math.cos(angle + (j + 0.5) * Math.PI * 2 / 5) * ir;
+                    const iy = y + Math.sin(angle + (j + 0.5) * Math.PI * 2 / 5) * ir;
+                    if (j === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
+                    ctx.lineTo(ix, iy);
                 }
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-            }
-            break;
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } break;
         case 'hearts':
             for (let i = 0; i < 8; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const size = Math.random() * 15 + 10;
+                const x = Math.random() * width; const y = Math.random() * height; const size = Math.random() * 15 + 10;
                 const color = getRandomColor();
-                ctx.fillStyle = color;
-                ctx.strokeStyle = darkenColor(color, 30);
-                ctx.lineWidth = 1;
+                ctx.fillStyle = color; ctx.strokeStyle = darkenColor(color, 30); ctx.lineWidth = 1;
                 drawHeart(ctx, x, y, size);
-            }
-            break;
-        case 'stars':
-            for (let i = 0; i < 12; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const outerRadius = Math.random() * 10 + 8;
-                const innerRadius = outerRadius / 2;
-                const angle = Math.random() * Math.PI * 2;
-                const color = getRandomColor();
-                ctx.fillStyle = color;
-                ctx.strokeStyle = darkenColor(color, 30);
-                ctx.lineWidth = 1;
-                drawStar(ctx, x, y, outerRadius, innerRadius, angle);
-            }
-            break;
-        case 'bubbles':
-            for (let i = 0; i < 10; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const size = Math.random() * 25 + 10;
-                const opacity = Math.random() * 0.4 + 0.2;
-                ctx.fillStyle = `rgba(200, 255, 255, ${opacity})`;
-                ctx.strokeStyle = `rgba(100, 200, 255, ${opacity + 0.2})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.ellipse(x, y, size / 2, size / 2, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = `rgba(255, 255, 255, ${opacity + 0.3})`;
-                ctx.beginPath();
-                ctx.ellipse(x - size / 4, y - size / 4, size / 6, size / 6, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            break;
-        case 'fireworks':
-            for (let i = 0; i < 3; i++) {
-                const centerX = Math.random() * width;
-                const centerY = Math.random() * height / 2 + height / 4;
-                const color = getRandomVibrantColor();
-                const particleCount = 15;
-                for (let j = 0; j < particleCount; j++) {
-                    const angle = (j / particleCount) * Math.PI * 2;
-                    const distance = Math.random() * 50 + 20;
-                    const x = centerX + Math.cos(angle) * distance;
-                    const y = centerY + Math.sin(angle) * distance;
-                    const size = Math.random() * 4 + 2;
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    ctx.ellipse(x, y, size / 2, size / 2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            break;
-        case 'glitch':
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                if (Math.random() < 0.05) {
-                    const shift = Math.floor(Math.random() * 20) - 10;
-                    const newIdx = Math.max(0, Math.min(data.length - 4, i + shift * 4));
-                    data[i] = data[newIdx];
-                    data[i + 1] = data[newIdx + 1];
-                    data[i + 2] = data[newIdx + 2];
-                }
-            }
-            for (let y = 0; y < height; y += Math.random() * 50 + 10) {
-                for (let x = 0; x < width; x++) {
-                    const idx = (y * width + x) * 4;
-                    if (Math.random() < 0.3) {
-                        data[idx] = 255 - data[idx];
-                        data[idx + 1] = 255 - data[idx + 1];
-                        data[idx + 2] = 255 - data[idx + 2];
-                    }
-                }
-            }
-            ctx.putImageData(imageData, 0, 0);
-            break;
+            } break;
     }
 }
 
 // ===== UI Functions =====
 function createPhotoSlots() {
-    const photoStrip = document.getElementById('photoStrip');
-    photoStrip.innerHTML = '';
-    for (let i = 0; i < photoCount; i++) {
-        const slot = document.createElement('div');
-        slot.className = 'photo-slot';
-        slot.id = `photoSlot${i}`;
-        slot.innerHTML = `<span class="slot-number">${i + 1}</span>`;
-        photoStrip.appendChild(slot);
+    const photoStrip = document.getElementById('photoStrip'); photoStrip.innerHTML = '';
+    for (let i = 0; i < PHOTO_COUNT; i++) {
+        const slot = document.createElement('div'); slot.className = 'photo-slot'; slot.id = `photoSlot${i}`;
+        slot.innerHTML = `<span class="slot-number">${i + 1}</span>`; photoStrip.appendChild(slot);
     }
 }
 
 function updatePhotoStrip() {
-    for (let i = 0; i < photoCount; i++) {
+    for (let i = 0; i < PHOTO_COUNT; i++) {
         const slot = document.getElementById(`photoSlot${i}`);
-        if (i < photos.length) {
-            slot.innerHTML = `<img src="${photos[i]}" alt="Foto ${i + 1}">`;
-            slot.classList.add('filled');
-        } else {
-            slot.innerHTML = `<span class="slot-number">${i + 1}</span>`;
-            slot.classList.remove('filled');
-        }
+        if (i < photos.length) { slot.innerHTML = `<img src="${photos[i]}" alt="Foto ${i + 1}">`; slot.classList.add('filled'); }
+        else { slot.innerHTML = `<span class="slot-number">${i + 1}</span>`; slot.classList.remove('filled'); }
     }
 }
 
 function loadProps() {
-    const propsGrid = document.getElementById('propsGrid');
-    propsGrid.innerHTML = '';
+    const propsGrid = document.getElementById('propsGrid'); propsGrid.innerHTML = '';
     const props = propsData[currentPropTab];
     props.forEach(prop => {
-        const propItem = document.createElement('div');
-        propItem.className = 'prop-item';
-        propItem.id = `prop-${prop.type}-${prop.id}`;
-        propItem.innerHTML = `<div class="prop-emoji">${prop.emoji}</div><div class="prop-name">${prop.name}</div>`;
+        const propItem = document.createElement('div'); propItem.className = 'prop-item';
+        propItem.id = `prop-${prop.type}-${prop.id}`; propItem.innerHTML = `<div class="prop-emoji">${prop.emoji}</div><div class="prop-name">${prop.name}</div>`;
         if (selectedProps[prop.type] === prop.id) propItem.classList.add('selected');
-        propItem.onclick = () => selectProp(prop.type, prop.id);
-        propsGrid.appendChild(propItem);
+        propItem.onclick = () => selectProp(prop.type, prop.id); propsGrid.appendChild(propItem);
     });
 }
 
@@ -1535,82 +826,40 @@ function getTabName(tab) {
 }
 
 function selectProp(type, id) {
-    if (selectedProps[type] === id) selectedProps[type] = null;
-    else selectedProps[type] = id;
-    loadProps();
-    updateStatus(`Accesorio: ${getPropName(type, id) || 'Ninguno'}`);
+    if (selectedProps[type] === id) selectedProps[type] = null; else selectedProps[type] = id;
+    loadProps(); updateStatus(`Accesorio: ${getPropName(type, id) || 'Ninguno'}`);
 }
 
 function getPropName(type, id) {
-    if (!id || id === 'none') return null;
-    const props = propsData[type];
-    if (!props) return null;
-    const prop = props.find(p => p.id === id);
-    return prop ? prop.name : null;
+    if (!id || id === 'none') return null; const props = propsData[type]; if (!props) return null;
+    const prop = props.find(p => p.id === id); return prop ? prop.name : null;
 }
 
-function selectPhotoCount(count) {
-    photoCount = parseInt(count);
-    document.querySelectorAll('.photo-option').forEach(option => {
-        option.classList.remove('selected');
-        if (parseInt(option.dataset.count) === count) option.classList.add('selected');
-    });
-    createPhotoSlots();
-    updateStatus(`Fotos: ${photoCount}`);
-}
-
-function updateTimeBetweenPhotos(value) {
-    timeBetweenPhotos = parseInt(value);
-    document.getElementById('timeBetweenPhotosValue').textContent = `${value}s`;
-    updateStatus(`Tiempo entre fotos: ${value}s`);
-}
-
-function updateCountdownTime(value) {
-    countdownTime = parseInt(value);
-    document.getElementById('countdownTimeValue').textContent = `${value}s`;
-    updateStatus(`Cuenta atras: ${value}s`);
-}
-
-function updateStatus(message) {
-    document.getElementById('statusText').textContent = message;
-}
-
-function clearPhotos() {
-    photos = [];
-    updatePhotoStrip();
-    document.getElementById('downloadBtn').disabled = true;
-    document.getElementById('shareBtn').disabled = true;
-    updateStatus('Fotos eliminadas');
-}
+function updateStatus(message) { document.getElementById('statusText').textContent = message; }
 
 // ===== Download Functions =====
 function downloadPhotoStrip() {
     if (photos.length === 0) return;
-    const stripCanvas = document.createElement('canvas');
-    const stripCtx = stripCanvas.getContext('2d');
-    const photoWidth = 200, photoHeight = 250, margin = 20;
-    const stripWidth = photoWidth * photos.length + margin * (photos.length + 1);
-    const stripHeight = photoHeight + margin * 2;
+    const stripCanvas = document.createElement('canvas'); const stripCtx = stripCanvas.getContext('2d');
+    const photoWidth = 200, photoHeight = 150, margin = 10;
+    const stripWidth = photoWidth; const stripHeight = photoHeight * photos.length + margin * (photos.length + 1);
     stripCanvas.width = stripWidth; stripCanvas.height = stripHeight;
     stripCtx.fillStyle = '#1a1a2e'; stripCtx.fillRect(0, 0, stripWidth, stripHeight);
-    stripCtx.strokeStyle = '#4ecdc4'; stripCtx.lineWidth = 4;
-    stripCtx.strokeRect(10, 10, stripWidth - 20, stripHeight - 20);
-    stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 24px Comic Sans MS, cursive';
-    stripCtx.textAlign = 'center';
-    stripCtx.fillText('Super Fotomatron Divertido', stripWidth / 2, 40);
-    stripCtx.fillStyle = '#ff6b6b'; stripCtx.font = '16px Comic Sans MS, cursive';
-    stripCtx.fillText(new Date().toLocaleDateString('es-ES'), stripWidth / 2, 65);
+    stripCtx.strokeStyle = '#4ecdc4'; stripCtx.lineWidth = 3; stripCtx.strokeRect(5, 5, stripWidth - 10, stripHeight - 10);
+    stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 18px Comic Neue, cursive'; stripCtx.textAlign = 'center';
+    stripCtx.fillText('Fotomatón', stripWidth / 2, 30);
+    stripCtx.fillStyle = '#ff6b6b'; stripCtx.font = '14px Comic Neue, cursive';
+    stripCtx.fillText(new Date().toLocaleDateString('es-ES'), stripWidth / 2, 50);
     let photosLoaded = 0;
     photos.forEach((photoUrl, index) => {
         const img = new Image();
         img.onload = () => {
-            const x = margin + index * (photoWidth + margin);
-            const y = margin + 80;
-            stripCtx.strokeStyle = '#ff6b6b'; stripCtx.lineWidth = 3;
-            stripCtx.strokeRect(x - 5, y - 5, photoWidth + 10, photoHeight + 10);
-            stripCtx.drawImage(img, x, y, photoWidth, photoHeight);
-            stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 20px Comic Sans MS, cursive';
-            stripCtx.fillText(`${index + 1}`, x + photoWidth / 2, y + photoHeight + 30);
+            const y = margin + index * (photoHeight + margin);
+            stripCtx.strokeStyle = '#ff6b6b'; stripCtx.lineWidth = 2;
+            stripCtx.strokeRect(5, y - 5, photoWidth - 10, photoHeight + 10);
+            stripCtx.drawImage(img, 5, y, photoWidth - 10, photoHeight);
+            stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 16px Comic Neue, cursive';
+            stripCtx.fillText(`${index + 1}`, photoWidth / 2, y + photoHeight + 25);
             photosLoaded++;
             if (photosLoaded === photos.length) {
                 const link = document.createElement('a');
@@ -1624,174 +873,74 @@ function downloadPhotoStrip() {
     });
 }
 
-async function sharePhotoStrip() {
-    if (photos.length === 0) return;
-    try {
-        const stripCanvas = document.createElement('canvas');
-        const stripCtx = stripCanvas.getContext('2d');
-        const photoWidth = 200, photoHeight = 250, margin = 20;
-        const stripWidth = photoWidth * photos.length + margin * (photos.length + 1);
-        const stripHeight = photoHeight + margin * 2;
-        stripCanvas.width = stripWidth; stripCanvas.height = stripHeight;
-        stripCtx.fillStyle = '#1a1a2e'; stripCtx.fillRect(0, 0, stripWidth, stripHeight);
-        stripCtx.strokeStyle = '#4ecdc4'; stripCtx.lineWidth = 4;
-        stripCtx.strokeRect(10, 10, stripWidth - 20, stripHeight - 20);
-        stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 24px Comic Sans MS, cursive';
-        stripCtx.textAlign = 'center';
-        stripCtx.fillText('Super Fotomatron Divertido', stripWidth / 2, 40);
-        stripCtx.fillStyle = '#ff6b6b'; stripCtx.font = '16px Comic Sans MS, cursive';
-        stripCtx.fillText(new Date().toLocaleDateString('es-ES'), stripWidth / 2, 65);
-        const images = await Promise.all(photos.map(photoUrl => {
-            return new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = photoUrl; });
-        }));
-        images.forEach((img, index) => {
-            if (!img) return;
-            const x = margin + index * (photoWidth + margin); const y = margin + 80;
-            stripCtx.strokeStyle = '#ff6b6b'; stripCtx.lineWidth = 3;
-            stripCtx.strokeRect(x - 5, y - 5, photoWidth + 10, photoHeight + 10);
-            stripCtx.drawImage(img, x, y, photoWidth, photoHeight);
-            stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 20px Comic Sans MS, cursive';
-            stripCtx.fillText(`${index + 1}`, x + photoWidth / 2, y + photoHeight + 30);
-        });
-        const blob = await new Promise(resolve => stripCanvas.toBlob(resolve, 'image/jpeg', 0.92));
-        if (navigator.share) {
-            await navigator.share({ title: 'Super Fotomatron Divertido', text: 'Mira mi tira de fotos!', files: [new File([blob], `fotomatron-${new Date().toISOString().slice(0, 10)}.jpg`, { type: 'image/jpeg' })] });
-            updateStatus('Compartido!');
-        } else downloadPhotoStrip();
-    } catch (error) { console.error('Error sharing:', error); updateStatus('Error al compartir'); downloadPhotoStrip(); }
-}
-
 // ===== Error Handling =====
-function showErrorModal(message) {
-    document.getElementById('errorMessage').textContent = message;
-    document.getElementById('errorModal').classList.add('active');
-}
+function showErrorModal(message) { document.getElementById('errorMessage').textContent = message; document.getElementById('errorModal').classList.add('active'); }
+function closeErrorModal() { document.getElementById('errorModal').classList.remove('active'); initializeCamera(); }
 
-function closeErrorModal() {
-    document.getElementById('errorModal').classList.remove('active');
-    initializeCamera();
-}
-
-// ===== Effects Functions =====
+// ===== Effects =====
 function triggerConfetti() {
-    const confettiContainer = document.getElementById('confettiContainer');
-    confettiContainer.innerHTML = '';
-    confettiContainer.classList.add('active');
-    const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ff9ff3', '#54a0ff', '#a55eea'];
-    for (let i = 0; i < 50; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.top = '-20px';
-        confetti.style.width = Math.random() * 10 + 5 + 'px';
-        confetti.style.height = confetti.style.width;
-        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-        confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
-        confetti.style.animationDelay = Math.random() * 0.5 + 's';
-        confettiContainer.appendChild(confetti);
+    const cc = document.getElementById('confettiContainer'); cc.innerHTML = ''; cc.classList.add('active');
+    const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ff9ff3', '#54a0ff'];
+    for (let i = 0; i < 30; i++) {
+        const c = document.createElement('div'); c.className = 'confetti';
+        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+        c.style.left = Math.random() * 100 + '%'; c.style.top = '-20px';
+        c.style.width = Math.random() * 8 + 4 + 'px'; c.style.height = c.style.width;
+        c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        c.style.animationDelay = Math.random() * 0.5 + 's';
+        cc.appendChild(c);
     }
-    setTimeout(() => confettiContainer.classList.remove('active'), 3000);
+    setTimeout(() => cc.classList.remove('active'), 3000);
 }
 
 function playShutterSound() {
     try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const bufferSize = audioCtx.sampleRate * 0.1;
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
-        const envelope = audioCtx.createGain();
-        envelope.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        envelope.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-        noise.connect(envelope); envelope.connect(audioCtx.destination);
-        noise.start(audioCtx.currentTime); noise.stop(audioCtx.currentTime + 0.1);
-    } catch (error) {}
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const bs = ac.sampleRate * 0.1; const b = ac.createBuffer(1, bs, ac.sampleRate);
+        const d = b.getChannelData(0); for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1;
+        const n = ac.createBufferSource(); n.buffer = b;
+        const e = ac.createGain(); e.gain.setValueAtTime(0.3, ac.currentTime); e.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.05);
+        n.connect(e); e.connect(ac.destination); n.start(ac.currentTime); n.stop(ac.currentTime + 0.1);
+    } catch (e) {}
 }
 
 function playBeepSound() {
     try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-        const gainNode = audioCtx.createGain();
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-        oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
-        oscillator.start(audioCtx.currentTime); oscillator.stop(audioCtx.currentTime + 0.05);
-    } catch (error) {}
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(800, ac.currentTime);
+        const g = ac.createGain(); g.gain.setValueAtTime(0.1, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.05);
+        o.connect(g); g.connect(ac.destination); o.start(ac.currentTime); o.stop(ac.currentTime + 0.05);
+    } catch (e) {}
 }
 
-function playCelebrationSound() {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const frequencies = [440, 550, 660];
-        frequencies.forEach(freq => {
-            const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.5);
-        });
-    } catch (error) {}
-}
-
-// ===== Helper Functions =====
+// ===== Helpers =====
 function drawHeart(ctx, x, y, size) {
-    ctx.beginPath();
-    ctx.moveTo(x, y - size / 2);
+    ctx.beginPath(); ctx.moveTo(x, y - size / 2);
     ctx.bezierCurveTo(x - size / 2, y - size / 2, x - size, y, x, y + size / 2);
-    ctx.bezierCurveTo(x + size, y, x + size / 2, y - size / 2, x, y - size / 2);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
+    ctx.bezierCurveTo(x + size, y, x + size / 2, y - size / 2, x, y - size / 2); ctx.closePath(); ctx.fill(); ctx.stroke();
 }
 
 function drawStar(ctx, x, y, outerRadius, innerRadius, rotation = 0) {
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
-        const outerAngle = rotation + i * Math.PI * 2 / 5;
-        const innerAngle = rotation + (i + 0.5) * Math.PI * 2 / 5;
-        const outerX = x + Math.cos(outerAngle) * outerRadius;
-        const outerY = y + Math.sin(outerAngle) * outerRadius;
-        const innerX = x + Math.cos(innerAngle) * innerRadius;
-        const innerY = y + Math.sin(innerAngle) * innerRadius;
-        if (i === 0) ctx.moveTo(outerX, outerY);
-        else ctx.lineTo(outerX, outerY);
-        ctx.lineTo(innerX, innerY);
+        const oa = rotation + i * Math.PI * 2 / 5; const ia = rotation + (i + 0.5) * Math.PI * 2 / 5;
+        const ox = x + Math.cos(oa) * outerRadius; const oy = y + Math.sin(oa) * outerRadius;
+        const ix = x + Math.cos(ia) * innerRadius; const iy = y + Math.sin(ia) * innerRadius;
+        if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy); ctx.lineTo(ix, iy);
     }
     ctx.closePath(); ctx.fill(); ctx.stroke();
 }
 
-function getRandomColor() {
-    const colors = ['#FF69B4', '#FF6347', '#FFD700', '#9370DB', '#32CD32', '#1E90FF', '#FF8C00', '#FF1493'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function getRandomPastelColor() {
-    const colors = ['#FFD1DC', '#FFE5B4', '#B5EAD7', '#C7CEEA', '#E2F0CB', '#FFB7B7', '#F8C8DC', '#B2E2E2'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function getRandomVibrantColor() {
-    const colors = ['#FF5733', '#33FF57', '#3357FF', '#F3FF33', '#FF33F3', '#33FFF3'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
+function getRandomColor() { return ['#FF69B4','#FF6347','#FFD700','#9370DB','#32CD32','#1E90FF','#FF8C00','#FF1493'][Math.floor(Math.random() * 8)]; }
+function getRandomPastelColor() { return ['#FFD1DC','#FFE5B4','#B5EAD7','#C7CEEA','#E2F0CB','#FFB7B7','#F8C8DC','#B2E2E2'][Math.floor(Math.random() * 8)]; }
 function darkenColor(color, percent) {
-    const num = parseInt(color.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = Math.max(0, (num >> 16) - amt);
-    const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
-    const B = Math.max(0, (num & 0x0000FF) - amt);
+    const num = parseInt(color.replace('#', ''), 16); const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, (num >> 16) - amt); const G = Math.max(0, (num >> 8 & 0x00FF) - amt); const B = Math.max(0, (num & 0x0000FF) - amt);
     return '#' + (0x1000000 + (R * 0x10000) + (G * 0x100) + B).toString(16).slice(1);
 }
 
 // ===== Cleanup =====
-window.addEventListener('beforeunload', function() {
-    stopCamera();
-    photos.forEach(url => URL.revokeObjectURL(url));
-});
-</script>
+window.addEventListener('beforeunload', function() { stopCamera(); photos.forEach(url => URL.revokeObjectURL(url)); });
+    </script>
 </body>
 </html>
