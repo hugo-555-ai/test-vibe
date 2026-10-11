@@ -496,6 +496,18 @@
             font-family: inherit;
         }
 
+        .reset-filters {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+            text-transform: none;
+            box-shadow: none;
+        }
+
+        .reset-filters:hover:not(:disabled) { background: rgba(255, 107, 107, 0.22); box-shadow: none; }
+
         .distort-controls {
             margin-top: 10px;
             padding: 8px 10px;
@@ -764,6 +776,8 @@
 
     <div class="props-section">
         <h2>Accesorios</h2>
+        <button class="btn secondary small reset-filters" type="button" id="resetFiltersBtn" onclick="resetFilters()"
+                title="Quita filtro, distorsión, acabados y capas, y devuelve sus ajustes a los valores por defecto">🧹 Quitar todos los filtros</button>
         <div class="props-tabs" id="propsTabs"></div>
         <div class="props-grid" id="propsGrid"></div>
         <div class="distort-controls" id="distortControls" style="display:none;">
@@ -3344,6 +3358,25 @@ function selectProp(propId, category) {
     updateSummary();
     updateDistortControls();
     updateWishiControls();
+}
+
+// Clears every image look (Filtros, Distorsión, Acabado-1, Acabado-2) and puts all their settings back to defaults.
+// Accessories, decoration and backgrounds are left alone.
+function resetFilters() {
+    selectedProps.filter = 'none';
+    selectedProps.distort = 'none';
+    selectedProps.finish = 'none';
+    finishLayers = [];
+    finishParams = {};
+    finishSettings.dot = 1;
+    distortCenter.x = 0.5;
+    distortCenter.y = 0.5;
+    finishUiSig = '';                       // force the settings panel to rebuild from defaults
+    loadProps();
+    updateSummary();
+    updateDistortControls();
+    updateWishiControls();                  // also refreshes the Acabado settings panel
+    updateStatus('Filtros quitados y ajustes por defecto');
 }
 
 function updateSummary() {
