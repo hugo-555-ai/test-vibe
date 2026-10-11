@@ -438,6 +438,35 @@
             box-shadow: none;
         }
 
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            grid-template-areas: ". up ." "left . right" ". down .";
+            gap: 4px;
+            justify-content: center;
+            margin: 10px 0 4px;
+        }
+
+        .dpad button {
+            height: 34px;
+            border: 2px solid var(--panel-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            font-size: 0.9em;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .dpad button:active { background: var(--secondary); color: var(--dark); }
+        .dpad-up { grid-area: up; }
+        .dpad-left { grid-area: left; }
+        .dpad-right { grid-area: right; }
+        .dpad-down { grid-area: down; }
+
+        .camera-container, #previewCanvas { user-select: none; -webkit-user-select: none; }
+
         .accessory-controls .hint {
             margin-top: 8px;
             font-size: 0.72em;
@@ -574,8 +603,14 @@
         <div class="accessory-controls" id="accessoryControls" style="display:none;">
             <label for="sizeSlider"><span id="sizeLabel">Tamaño</span> <span id="sizeValue">100%</span></label>
             <input type="range" id="sizeSlider" min="0.4" max="2.5" step="0.05" value="1" oninput="onSizeSlider(this.value)">
+            <div class="dpad" aria-label="Mover accesorio">
+                <button type="button" class="dpad-up" onpointerdown="startNudge(0,-0.03)" title="Subir">▲</button>
+                <button type="button" class="dpad-left" onpointerdown="startNudge(-0.03,0)" title="Izquierda">◀</button>
+                <button type="button" class="dpad-right" onpointerdown="startNudge(0.03,0)" title="Derecha">▶</button>
+                <button type="button" class="dpad-down" onpointerdown="startNudge(0,0.03)" title="Bajar">▼</button>
+            </div>
             <button class="btn secondary small" type="button" onclick="resetAccessory()">↺ Restablecer</button>
-            <p class="hint">Arrastra el accesorio sobre la cámara para moverlo. Rueda del ratón o pellizco para cambiar el tamaño.</p>
+            <p class="hint">Arrastra sobre la cámara para moverlo (o usa las flechas). Rueda del ratón o pellizco para cambiar el tamaño.</p>
         </div>
         <div class="props-summary" id="propsSummary"></div>
     </div>
@@ -890,18 +925,49 @@ function canvasPoint(ev) {
     return { x: (ev.clientX - rect.left - offX) / scale, y: (ev.clientY - rect.top - offY) / scale };
 }
 
-function pickAccessory(p) {
+// Which accessory is under point p. "generous" widens the hit area for easier grabbing.
+function pickAccessory(p, generous) {
     var f = getFace(previewCanvas.width, previewCanvas.height);
+    var pad = generous ? f.w * 0.2 : 0;
     var best = null, bestDist = Infinity;
     ['glasses', 'hat'].forEach(function(cat) {      // glasses first: they sit on top of the hat
         if (selectedProps[cat] === 'none') return;
         var b = getAccessoryBox(cat, f);
-        if (p.x < b.x0 || p.x > b.x1 || p.y < b.y0 || p.y > b.y1) return;
+        if (p.x < b.x0 - pad || p.x > b.x1 + pad || p.y < b.y0 - pad || p.y > b.y1 + pad) return;
         var d = Math.abs(p.x - (b.x0 + b.x1) / 2) + Math.abs(p.y - (b.y0 + b.y1) / 2);
         if (d < bestDist) { bestDist = d; best = cat; }
     });
     return best;
 }
+
+// Drag target: the accessory under the pointer, else the one whose tab is open, else the only one worn.
+function chooseDragTarget(p) {
+    var hit = pickAccessory(p, true);
+    if (hit) return hit;
+    if ((currentPropTab === 'hat' || currentPropTab === 'glasses') && selectedProps[currentPropTab] !== 'none') return currentPropTab;
+    var worn = ['glasses', 'hat'].filter(function(c) { return selectedProps[c] !== 'none'; });
+    return worn.length === 1 ? worn[0] : null;
+}
+
+function nudgeAccessory(ddx, ddy) {
+    var cat = currentPropTab;
+    if (cat !== 'hat' && cat !== 'glasses') return;
+    activeAccessory = cat;
+    accessoryTransform[cat].dx += ddx;
+    accessoryTransform[cat].dy += ddy;
+}
+
+var nudgeTimer = null;
+function startNudge(ddx, ddy) {
+    stopNudge();
+    nudgeAccessory(ddx, ddy);
+    nudgeTimer = setInterval(function() { nudgeAccessory(ddx, ddy); }, 60);
+}
+function stopNudge() {
+    if (nudgeTimer) { clearInterval(nudgeTimer); nudgeTimer = null; }
+}
+window.addEventListener('pointerup', stopNudge);
+window.addEventListener('blur', stopNudge);
 
 function setAccessoryScale(cat, s) {
     accessoryTransform[cat].scale = Math.max(0.4, Math.min(2.5, s));
@@ -914,24 +980,27 @@ function setupAccessoryInteraction() {
 
     c.addEventListener('pointerdown', function(ev) {
         activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        if (ev.pointerType === 'mouse') activePointers = {};   // a mouse is a single pointer: drop stale entries
+        activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
         var ids = Object.keys(activePointers);
-        if (ids.length === 2 && activeAccessory) {            // pinch to resize
+        if (ids.length === 2 && activeAccessory && ev.pointerType !== 'mouse') {   // pinch to resize
             var a = activePointers[ids[0]], b = activePointers[ids[1]];
             dragState = { cat: activeAccessory, pinch: true, startDist: Math.hypot(a.x - b.x, a.y - b.y), startScale: accessoryTransform[activeAccessory].scale };
             return;
         }
-        var cat = pickAccessory(canvasPoint(ev));
+        var cat = chooseDragTarget(canvasPoint(ev));
         if (!cat) return;
         activeAccessory = cat;
         var p = canvasPoint(ev), f = getFace(c.width, c.height), tr = accessoryTransform[cat];
         dragState = { cat: cat, startX: p.x, startY: p.y, startDx: tr.dx, startDy: tr.dy, u: f.w };
-        c.setPointerCapture(ev.pointerId);
+        try { c.setPointerCapture(ev.pointerId); } catch (e) { /* not fatal: window listeners below still end the drag */ }
         c.style.cursor = 'grabbing';
         if (currentPropTab !== cat) switchPropTab(cat);
         ev.preventDefault();
     });
 
     c.addEventListener('pointermove', function(ev) {
+        if (dragState && ev.pointerType === 'mouse' && ev.buttons === 0) { endPointer(ev); return; }   // lost the button-up
         if (activePointers[ev.pointerId]) activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
         if (dragState && dragState.pinch) {
             var ids = Object.keys(activePointers);
@@ -957,6 +1026,8 @@ function setupAccessoryInteraction() {
     }
     c.addEventListener('pointerup', endPointer);
     c.addEventListener('pointercancel', endPointer);
+    window.addEventListener('pointerup', endPointer);      // released outside the canvas
+    window.addEventListener('pointercancel', endPointer);
 
     c.addEventListener('wheel', function(ev) {
         var cat = pickAccessory(canvasPoint(ev)) || (activeAccessory && selectedProps[activeAccessory] !== 'none' ? activeAccessory : null);
