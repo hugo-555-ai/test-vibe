@@ -1491,19 +1491,79 @@ function playShutterSound() { beep(1200, 0.12, 0.2); }
 function playBeepSound() { beep(800, 0.06, 0.12); }
 
 // ===== Fun emoji =====
-var funEmojis = ['😀', '😂', '😆', '😊', '😍', '😘', '😜', '😃', '🤪', '😁', '😋', '😎', '🥳', '🤩', '🙌', '👏', '✌️', '💋'];
+// Faces and gestures the user can actually perform in front of the camera.
+var poseEmojis = [
+    { e: '😀', name: 'Sonrisa' },
+    { e: '😁', name: 'Sonrisa enorme' },
+    { e: '😮', name: 'Sorpresa' },
+    { e: '😱', name: '¡Susto!' },
+    { e: '😜', name: 'Guiño con lengua' },
+    { e: '😉', name: 'Guiño' },
+    { e: '🤪', name: 'Cara de loco' },
+    { e: '😘', name: 'Beso' },
+    { e: '🥰', name: 'Enamorado' },
+    { e: '🤔', name: 'Pensativo' },
+    { e: '🤫', name: 'Silencio' },
+    { e: '😏', name: 'Pícaro' },
+    { e: '😠', name: 'Enfadado' },
+    { e: '😭', name: 'Llorando' },
+    { e: '😴', name: 'Dormido' },
+    { e: '😎', name: 'Chulo' },
+    { e: '✌️', name: 'Paz' },
+    { e: '👍', name: 'Pulgar arriba' },
+    { e: '👌', name: 'Vale' },
+    { e: '🤘', name: 'Rock' },
+    { e: '🙌', name: 'Manos arriba' },
+    { e: '💪', name: 'Fuerte' }
+];
+var sessionPoses = [];
 
-function showRandomEmoji() {
-    var el = document.getElementById('emojiContainer');
+function pickSessionPoses() {
+    var pool = poseEmojis.slice();
+    for (var i = pool.length - 1; i > 0; i--) {     // Fisher-Yates shuffle: no repeats within a session
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    sessionPoses = pool.slice(0, PHOTO_COUNT);
+}
+
+function showPose(index) {
+    var pose = sessionPoses[index];
+    var el = document.getElementById('poseBox');
     if (!el) {
         el = document.createElement('div');
-        el.id = 'emojiContainer';
-        el.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;font-size:100px;line-height:1.1;text-align:center;';
+        el.id = 'poseBox';
+        el.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;text-align:center;';
         document.querySelector('.camera-container').appendChild(el);
     }
-    el.textContent = funEmojis[Math.floor(Math.random() * funEmojis.length)];
+    if (!pose) { el.style.display = 'none'; return; }
+    el.innerHTML = '<div style="font-size:100px;line-height:1.1;">' + pose.e + '</div>' +
+        '<div style="display:inline-block;padding:4px 16px;border-radius:16px;background:rgba(0,0,0,0.6);color:#ffe66d;font-weight:600;font-size:1.2em;">' + pose.name + '</div>';
     el.style.display = 'block';
-    later(function() { el.style.display = 'none'; }, TIME_BETWEEN_PHOTOS * 1000);
+}
+
+function hidePose() {
+    var el = document.getElementById('poseBox');
+    if (el) el.style.display = 'none';
+}
+
+// Stamps the pose emoji small in the bottom-left corner of a photo canvas.
+function stampPose(ctx, w, h, pose) {
+    if (!pose) return;
+    var size = h * 0.13;
+    var margin = h * 0.035;
+    var cx = margin + size / 2, cy = h - margin - size / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = Math.round(size) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000';
+    ctx.fillText(pose.e, cx, cy + size * 0.05);
+    ctx.restore();
 }
 
 // ===== Modal =====
@@ -1556,7 +1616,9 @@ function startPhotoBooth() {
     photos = [];
     currentPhotoIndex = 0;
     resetPhotoSlots();
-    updateStatus('¡Prepárate!');
+    pickSessionPoses();
+    showPose(0);
+    updateStatus('¡Prepárate! Haz el gesto del emoji');
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('recBadge').classList.add('active');
     document.getElementById('recCount').textContent = '1';
@@ -1590,7 +1652,7 @@ function takePhoto() {
         document.getElementById('recCount').textContent = String(currentPhotoIndex + 1);
         updateStatus('Siguiente foto en ' + TIME_BETWEEN_PHOTOS + '…');
         updateNextPhotoCountdown();
-        showRandomEmoji();
+        showPose(currentPhotoIndex);
         later(function() { takePhoto(); }, TIME_BETWEEN_PHOTOS * 1000);
     });
 }
@@ -1599,7 +1661,13 @@ function capturePhoto() {
     return new Promise(function(resolve) {
         var w = previewCanvas.width, h = previewCanvas.height;
         renderFrame(previewCtx, w, h, performance.now());   // same pipeline as the live preview
-        previewCanvas.toBlob(function(blob) {
+        // Copy so the emoji stamp lands only in the saved photo, not in the live preview.
+        var shot = document.createElement('canvas');
+        shot.width = w; shot.height = h;
+        var sctx = shot.getContext('2d');
+        sctx.drawImage(previewCanvas, 0, 0);
+        stampPose(sctx, w, h, sessionPoses[currentPhotoIndex]);
+        shot.toBlob(function(blob) {
             if (!blob) { resolve(); return; }
             var url = URL.createObjectURL(blob);
             photos.push(url);
@@ -1626,6 +1694,7 @@ function endPhotoSession() {
     isSessionRunning = false;
     clearSessionTimers();
     document.getElementById('recBadge').classList.remove('active');
+    hidePose();
     updateStatus('Procesando fotos…');
     later(function() {
         downloadPhotoStrip().then(function() {
@@ -1641,6 +1710,7 @@ function stopPhotoBooth() {
     document.getElementById('countdownDisplay').classList.remove('active');
     document.getElementById('recBadge').classList.remove('active');
     document.getElementById('startBtn').style.display = '';
+    hidePose();
     updateStatus('Sesión detenida');
 }
 
