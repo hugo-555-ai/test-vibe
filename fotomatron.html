@@ -751,7 +751,8 @@ var propCategories = [
         { id: 'warm', name: 'Cálido', emoji: '🔥' },
         { id: 'cool', name: 'Frío', emoji: '❄️' },
         { id: 'blur', name: 'Suave', emoji: '💫' },
-        { id: 'halloween', name: 'Halloween', emoji: '🎃' }
+        { id: 'halloween', name: 'Halloween', emoji: '🎃' },
+        { id: 'warhol', name: 'Warhol', emoji: '💋' }
     ]},
     { key: 'distort', label: 'Distorsión', icon: '🌀', items: [
         { id: 'none', name: 'Ninguna', emoji: '🚫' },
@@ -846,7 +847,8 @@ function getCategory(key) {
 document.addEventListener('DOMContentLoaded', function() {
     cameraView = document.getElementById('cameraView');
     previewCanvas = document.getElementById('previewCanvas');
-    previewCtx = previewCanvas.getContext('2d');
+    // The frame is read back every render (distortions, pop-art, pixel glasses): keep it in CPU memory.
+    previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
     previewCanvas.width = 1280;
     previewCanvas.height = 960;
     createPhotoSlots();
@@ -980,7 +982,22 @@ function renderFrame(ctx, w, h, t, guides) {
     var face = getFace(w, h);
     drawPlaced(ctx, face);
     effects.forEach(function(id) { drawEffect(ctx, w, h, id, t); });
-    if (guides) { drawGuides(ctx, face); drawCenterMarker(ctx, w, h); }
+    if (warholOn()) applyWarhol(ctx.canvas, ctx, w, h);          // pop-art grid over everything drawn so far
+    if (guides) {
+        if (warholOn()) {                                          // editing aids repeated in each of the four panels
+            for (var q = 0; q < 4; q++) {
+                ctx.save();
+                ctx.translate((q % 2) * w / 2, (q >> 1) * h / 2);
+                ctx.scale(0.5, 0.5);
+                drawGuides(ctx, face);
+                drawCenterMarker(ctx, w, h);
+                ctx.restore();
+            }
+        } else {
+            drawGuides(ctx, face);
+            drawCenterMarker(ctx, w, h);
+        }
+    }
 }
 
 // ===== Placed accessories: hats & glasses, as many as wanted, each with its own place/size =====
@@ -1082,7 +1099,7 @@ function drawCenterMarker(ctx, w, h) {
 function hitCenter(p) {
     if (!CENTER_DISTORTIONS[selectedProps.distort]) return false;
     var x = previewCanvas.width * distortCenter.x, y = previewCanvas.height * distortCenter.y;
-    return Math.hypot(p.x - x, p.y - y) <= centerMarkerRadius();
+    return Math.hypot(p.x - x, p.y - y) <= centerMarkerRadius() * (warholOn() ? 2 : 1);
 }
 
 function resetDistortCenter() {
@@ -1133,7 +1150,7 @@ function hitHandle(p) {
     var item = getSelectedItem();
     if (!item) return null;
     var f = getFace(previewCanvas.width, previewCanvas.height);
-    var r = handleSize() * 1.1;
+    var r = handleSize() * 1.1 * (warholOn() ? 2 : 1);     // panels are half size: widen the targets
     var hs = getHandles(item, f);
     for (var i = 0; i < hs.length; i++) {
         if (Math.abs(p.x - hs[i].x) <= r && Math.abs(p.y - hs[i].y) <= r) return hs[i];
@@ -1156,18 +1173,21 @@ function hoverCursor(p) {
     return getSelectedItem() ? 'move' : 'default';      // drag from anywhere moves the selected one
 }
 
-function canvasPoint(ev) {
+function canvasPoint(ev, panel) {
     var rect = previewCanvas.getBoundingClientRect();
     var cw = previewCanvas.width, ch = previewCanvas.height;
     var scale = Math.max(rect.width / cw, rect.height / ch);      // object-fit: cover
     var offX = (rect.width - cw * scale) / 2, offY = (rect.height - ch * scale) / 2;
-    return { x: (ev.clientX - rect.left - offX) / scale, y: (ev.clientY - rect.top - offY) / scale };
+    var x = (ev.clientX - rect.left - offX) / scale, y = (ev.clientY - rect.top - offY) / scale;
+    if (!warholOn()) return { x: x, y: y };
+    var pn = panel || { px: x >= cw / 2 ? 1 : 0, py: y >= ch / 2 ? 1 : 0 };   // which of the 4 panels (kept during a drag)
+    return { x: (x - pn.px * cw / 2) * 2, y: (y - pn.py * ch / 2) * 2, panel: pn };
 }
 
 // Accessory under point p (nearest centre wins). "generous" widens the hit area for easier grabbing.
 function pickAccessory(p, generous) {
     var f = getFace(previewCanvas.width, previewCanvas.height);
-    var pad = generous ? f.w * 0.2 : 0;
+    var pad = generous ? f.w * 0.2 * (warholOn() ? 2 : 1) : 0;
     var best = null, bestDist = Infinity;
     placed.forEach(function(item) {
         var b = getAccessoryBox(item, f);
@@ -1227,7 +1247,7 @@ function setupAccessoryInteraction() {
         }
         var p = canvasPoint(ev);
         if (hitCenter(p)) {                                                  // grab the distortion centre
-            dragState = { centerDrag: true };
+            dragState = { centerDrag: true, panel: p.panel };
             try { c.setPointerCapture(ev.pointerId); } catch (e) { /* see below */ }
             c.style.cursor = 'grabbing';
             ev.preventDefault();
@@ -1236,7 +1256,7 @@ function setupAccessoryInteraction() {
         var hnd = hitHandle(p);
         if (hnd && sel) {                                                    // grab a corner: resize
             var anc = getAccessoryAnchor(sel, getFace(c.width, c.height));
-            dragState = { uid: sel.uid, resize: true, anchor: anc, cursor: hnd.cursor,
+            dragState = { uid: sel.uid, resize: true, panel: p.panel, anchor: anc, cursor: hnd.cursor,
                           startDist: Math.max(10, Math.hypot(p.x - anc.x, p.y - anc.y)), startScale: sel.scale };
             try { c.setPointerCapture(ev.pointerId); } catch (e) { /* see below */ }
             c.style.cursor = hnd.cursor;
@@ -1246,7 +1266,7 @@ function setupAccessoryInteraction() {
         var item = chooseDragTarget(p);
         if (!item) return;
         var f = getFace(c.width, c.height);
-        dragState = { uid: item.uid, startX: p.x, startY: p.y, startDx: item.dx, startDy: item.dy, u: f.w };
+        dragState = { uid: item.uid, panel: p.panel, startX: p.x, startY: p.y, startDx: item.dx, startDy: item.dy, u: f.w };
         try { c.setPointerCapture(ev.pointerId); } catch (e) { /* not fatal: window listeners still end the drag */ }
         c.style.cursor = 'grabbing';
         if (selectedUid !== item.uid) { selectedUid = item.uid; updateAccessoryControls(); }
@@ -1257,7 +1277,7 @@ function setupAccessoryInteraction() {
         if (dragState && ev.pointerType === 'mouse' && ev.buttons === 0) { endPointer(ev); return; }   // lost the button-up
         if (activePointers[ev.pointerId]) activePointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
         if (dragState && dragState.centerDrag) {
-            var pc = canvasPoint(ev);
+            var pc = canvasPoint(ev, dragState.panel);
             distortCenter.x = Math.max(0.05, Math.min(0.95, pc.x / c.width));
             distortCenter.y = Math.max(0.05, Math.min(0.95, pc.y / c.height));
             return;
@@ -1272,11 +1292,11 @@ function setupAccessoryInteraction() {
             return;
         }
         if (dragState && dragState.resize && item) {
-            var pr = canvasPoint(ev);
+            var pr = canvasPoint(ev, dragState.panel);
             var ratio = Math.hypot(pr.x - dragState.anchor.x, pr.y - dragState.anchor.y) / dragState.startDist;
             setAccessoryScale(item, dragState.startScale * ratio);
         } else if (dragState && item) {
-            var p = canvasPoint(ev);
+            var p = canvasPoint(ev, dragState.panel);
             item.dx = dragState.startDx + (p.x - dragState.startX) / dragState.u;
             item.dy = dragState.startDy + (p.y - dragState.startY) / dragState.u;
         } else if (ev.pointerType === 'mouse') {
@@ -1374,7 +1394,8 @@ var FILTERS = {
     warm: { css: 'saturate(1.15)', tint: 'rgba(255,140,30,0.30)' },
     cool: { css: 'saturate(1.05)', tint: 'rgba(30,120,255,0.30)' },
     blur: { css: 'blur(5px)', blur: true },
-    halloween: { css: 'contrast(1.2) saturate(1.3) brightness(0.9) sepia(0.25)', tint: 'rgba(255,90,0,0.32)', vignette: 'rgba(40,0,70,0.75)' }
+    halloween: { css: 'contrast(1.2) saturate(1.3) brightness(0.9) sepia(0.25)', tint: 'rgba(255,90,0,0.32)', vignette: 'rgba(40,0,70,0.75)' },
+    warhol: { warhol: true }     // pop-art 2x2 grid, see applyWarhol()
 };
 
 var distCanvas = document.createElement('canvas');
@@ -1535,6 +1556,60 @@ function drawVideoLayer(w, h, t) {
     }
     if (ready && selectedProps.distort !== 'none') applyDistortion(selectedProps.distort, w, h, t);
 }
+
+// ===== Warhol pop-art: 2x2 grid, each panel posterised to 4 tones with its own palette =====
+var WARHOL_PALETTES = [
+    ['#2b1055', '#e6007e', '#ff8a00', '#ffe14d'],
+    ['#06223d', '#00a6d6', '#ff4f9a', '#fff1a8'],
+    ['#1a1a1a', '#e63946', '#ffd60a', '#a8e6cf'],
+    ['#14213d', '#2ec4b6', '#ff9f1c', '#fdf0d5']
+].map(function(pal) {
+    return pal.map(function(hex) {
+        return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+    });
+});
+var warholSmall = document.createElement('canvas');
+var warholSmallCtx = warholSmall.getContext('2d', { willReadFrequently: true });
+var warholOut = document.createElement('canvas');
+var warholOutCtx = warholOut.getContext('2d');
+
+function applyWarhol(src, dst, w, h) {
+    var k = renderHQ ? 1 : 0.5;                               // preview works at half resolution
+    var qw = Math.max(2, Math.round(w * k / 2)), qh = Math.max(2, Math.round(h * k / 2));
+    if (warholSmall.width !== qw || warholSmall.height !== qh) { warholSmall.width = qw; warholSmall.height = qh; }
+    warholSmallCtx.drawImage(src, 0, 0, w, h, 0, 0, qw, qh);   // averaging also tames webcam noise
+    var px = warholSmallCtx.getImageData(0, 0, qw, qh).data;
+    var levels = new Uint8Array(qw * qh);
+    for (var i = 0, p = 0; i < levels.length; i++, p += 4) {
+        var lum = (0.299 * px[p] + 0.587 * px[p + 1] + 0.114 * px[p + 2]) / 255;
+        var l = (lum - 0.5) * 1.5 + 0.5;                      // contrast boost
+        levels[i] = l < 0.28 ? 0 : (l < 0.5 ? 1 : (l < 0.72 ? 2 : 3));
+    }
+    var ow = qw * 2, oh = qh * 2;
+    if (warholOut.width !== ow || warholOut.height !== oh) { warholOut.width = ow; warholOut.height = oh; }
+    var img = warholOutCtx.createImageData(ow, oh);
+    var d = img.data;
+    for (var q = 0; q < 4; q++) {
+        var pal = WARHOL_PALETTES[q], ox = (q % 2) * qw, oy = (q >> 1) * qh;
+        for (var y = 0; y < qh; y++) {
+            var row = y * qw, orow = ((oy + y) * ow + ox) * 4;
+            for (var x = 0; x < qw; x++) {
+                var c = pal[levels[row + x]], o = orow + x * 4;
+                d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+            }
+        }
+    }
+    warholOutCtx.putImageData(img, 0, 0);
+    dst.save();
+    dst.setTransform(1, 0, 0, 1, 0, 0);
+    dst.globalCompositeOperation = 'source-over';
+    dst.globalAlpha = 1;
+    dst.imageSmoothingEnabled = true;
+    dst.drawImage(warholOut, 0, 0, ow, oh, 0, 0, w, h);
+    dst.restore();
+}
+
+function warholOn() { return selectedProps.filter === 'warhol'; }
 
 function pixelEach(ctx, w, h, fn) {
     var img = ctx.getImageData(0, 0, w, h);
