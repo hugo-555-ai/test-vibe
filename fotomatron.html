@@ -263,10 +263,9 @@
         .start-btn-container {
             grid-area: camera;
             position: absolute;
-            top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -276,8 +275,8 @@
 
         .start-btn-container .btn {
             pointer-events: auto;
-            width: 50%;
-            aspect-ratio: 1;
+            width: 400px;
+            height: 100px;
             border-radius: 15px;
         }
 
@@ -1311,7 +1310,11 @@ function endPhotoSession() {
     if (photoTimeout) clearTimeout(photoTimeout);
     if (betweenPhotosTimeout) clearTimeout(betweenPhotosTimeout);
     updateStatus('Procesando fotos...');
-    setTimeout(function() { downloadPhotoStrip(); }, 500);
+    setTimeout(function() { 
+        downloadPhotoStrip();
+        document.getElementById('startBtn').style.display = 'block';
+        updateStatus('Listo para empezar');
+    }, 500);
 }
 
 function stopPhotoBooth() {
