@@ -294,14 +294,19 @@
             transform: none;
         }
 
-        /* Countdown - Center (75% of camera area) */
+        /* Countdown - Inside Camera */
         .countdown-container {
-            grid-area: countdown;
+            grid-area: camera;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 10;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px 0;
-            position: relative;
         }
 
         .countdown-display {
@@ -313,10 +318,6 @@
             display: none;
             width: 75%;
             text-align: center;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.5);
             padding: 20px;
             border-radius: 15px;
@@ -520,6 +521,9 @@
         <div class="camera-overlay"></div>
         <div class="camera-frame"></div>
         <canvas id="compositeCanvas" style="display: none;"></canvas>
+        <div class="countdown-container">
+            <div class="countdown-display" id="countdownDisplay"></div>
+        </div>
     </div>
 
     <div class="props-section">
@@ -532,10 +536,6 @@
             <button class="prop-tab" onclick="switchPropTab('effects')">Efectos</button>
         </div>
         <div class="props-grid" id="propsGrid"></div>
-    </div>
-
-    <div class="countdown-container">
-        <div class="countdown-display" id="countdownDisplay"></div>
     </div>
 
     <div class="start-btn-container">
