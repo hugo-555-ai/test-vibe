@@ -794,6 +794,10 @@
                 <input type="checkbox" id="fxReact" checked onchange="onEffectReact(this.checked)">
                 <span>👋 Se apartan con el movimiento</span>
             </label>
+            <label class="switch-row" for="fxSound">
+                <input type="checkbox" id="fxSound" checked onchange="effectSettings.sound = this.checked">
+                <span>🔊 Sonido de los relámpagos</span>
+            </label>
             <label for="fxSens"><span>Sensibilidad</span> <span id="fxSensVal">100%</span></label>
             <input type="range" id="fxSens" min="0.25" max="3" step="0.05" value="1" oninput="onEffectSetting('sens', this.value)">
             <label for="fxAmount"><span>Cantidad</span> <span id="fxAmountVal">100%</span></label>
@@ -856,7 +860,7 @@ var selectedUid = null;   // accessory targeted by drag / wheel / slider
 var effects = [];         // active decoration ids (they can be combined)
 var finishLayers = [];    // active Acabado-2 layers (stackable)
 var finishSettings = { dot: 1 };   // halftone dot size multiplier
-var effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1 };   // shared by every active decoration
+var effectSettings = { amount: 1, speed: 1, size: 1, react: true, sens: 1, sound: true };   // shared by every active decoration
 var effectClock = 0;      // ms of decoration time, advanced by speed so changing it never makes things jump
 var lastClockNow = null;
 var dragState = null;
@@ -967,7 +971,8 @@ var propCategories = [
         { id: 'fireworks', name: 'Fuegos', emoji: '🎆' },
         { id: 'glitch', name: 'Glitch', emoji: '👾' },
         { id: 'bats', name: 'Murciélagos', emoji: '🦇' },
-        { id: 'ghosts', name: 'Fantasmas', emoji: '👻' }
+        { id: 'ghosts', name: 'Fantasmas', emoji: '👻' },
+        { id: 'lightning', name: 'Relámpagos', emoji: '⚡' }
     ]}
 ];
 
@@ -1279,6 +1284,7 @@ function onEffectReact(on) {
 function resetEffectSettings() {
     effectSettings.amount = 1; effectSettings.speed = 1; effectSettings.size = 1; effectSettings.sens = 1;
     effectSettings.react = true;
+    effectSettings.sound = true;
     updateEffectControls();
 }
 
@@ -1287,6 +1293,7 @@ function updateEffectControls() {
     if (!box) return;
     box.style.display = currentPropTab === 'effect' ? 'block' : 'none';
     document.getElementById('fxReact').checked = effectSettings.react;
+    document.getElementById('fxSound').checked = effectSettings.sound;
     document.getElementById('fxSens').disabled = !effectSettings.react;
     document.getElementById('fxSens').value = effectSettings.sens;
     document.getElementById('fxSensVal').textContent = Math.round(effectSettings.sens * 100) + '%';
@@ -3178,6 +3185,63 @@ function drawEffect(ctx, w, h, id, t) {
                 ctx.fill();
             }
             break;
+        case 'lightning': {
+            var L = fx.light || (fx.light = { idx: 0, next: t + 700, start: null, played: true });
+            if (t >= L.next) {                                   // a new strike
+                L.idx++;
+                L.start = t;
+                L.played = false;
+                var rs = mulberry32(L.idx * 7919 + 13);
+                L.next = t + (2400 + rs() * 4200) / Math.max(0.25, amount);
+            }
+            if (L.start === null) break;
+            var age = (t - L.start) / 1000;
+            if (age < 0 || age > 0.65) break;
+            if (!L.played) {
+                L.played = true;
+                if (effectSettings.sound && age < 0.3) playThunder();
+            }
+            // two quick flashes, then a fade
+            var flash = age < 0.07 ? 1 : (age < 0.13 ? 0.25 : (age < 0.22 ? 0.75 : Math.max(0, 0.45 - (age - 0.22))));
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = 'rgba(190,205,255,' + (0.55 * flash) + ')';
+            ctx.fillRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'source-over';
+            if (age < 0.3) {                                      // the bolt: jagged path from the top with a few branches
+                var rb = mulberry32(L.idx * 104729 + 7);
+                var pts = [], bx = (0.15 + rb() * 0.7) * w, by = 0, segs = 9;
+                var endY = (0.55 + rb() * 0.4) * h;
+                pts.push([bx, by]);
+                for (var q = 1; q <= segs; q++) {
+                    bx += (rb() - 0.5) * 0.14 * w;
+                    by = endY * q / segs;
+                    pts.push([bx, by]);
+                }
+                var bolts = [{ p: pts, wd: 5 * s }];
+                for (var br = 0; br < 3; br++) {
+                    var at = pts[2 + ((rb() * (segs - 4)) | 0)];
+                    var bp = [at], dirx = rb() > 0.5 ? 1 : -1, bxx = at[0], byy = at[1];
+                    for (var bs = 0; bs < 4; bs++) {
+                        bxx += dirx * (0.03 + rb() * 0.05) * w;
+                        byy += (0.04 + rb() * 0.06) * h;
+                        bp.push([bxx, byy]);
+                    }
+                    bolts.push({ p: bp, wd: 2.2 * s });
+                }
+                var bAlpha = age < 0.07 ? 1 : (age < 0.13 ? 0.3 : (age < 0.22 ? 0.9 : 0.4));
+                ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+                ctx.shadowColor = 'rgba(150,180,255,' + bAlpha + ')';
+                ctx.shadowBlur = 24 * s;
+                ctx.strokeStyle = 'rgba(255,255,255,' + bAlpha + ')';
+                bolts.forEach(function(bo) {
+                    ctx.lineWidth = Math.max(1, bo.wd);
+                    ctx.beginPath();
+                    bo.p.forEach(function(pt, k) { if (k === 0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]); });
+                    ctx.stroke();
+                });
+            }
+            break;
+        }
         case 'glitch':
             var gr = mulberry32(Math.floor(t / 140) * 7919 + 13);
             var glitchBoost = (effectSettings.react && motion.has) ? 1 + 4 * Math.min(1, motion.level * 10) : 1;
@@ -3423,6 +3487,45 @@ function beep(freq, duration, volume) {
         osc.stop(audioCtx.currentTime + duration);
     } catch (e) { /* audio not supported */ }
 }
+// Thunder: a sharp crack followed, a moment later, by a long low rumble (filtered noise).
+var noiseBuf = null;
+function getNoiseBuffer(ac) {
+    if (noiseBuf && noiseBuf.sampleRate === ac.sampleRate) return noiseBuf;
+    var len = Math.round(ac.sampleRate * 3);
+    noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+    var d = noiseBuf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+}
+
+function playThunder() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var ac = audioCtx, now = ac.currentTime, buf = getNoiseBuffer(ac);
+        // crack
+        var s1 = ac.createBufferSource(); s1.buffer = buf;
+        var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+        var g1 = ac.createGain();
+        g1.gain.setValueAtTime(0.0001, now);
+        g1.gain.linearRampToValueAtTime(0.4, now + 0.004);
+        g1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        s1.connect(hp); hp.connect(g1); g1.connect(ac.destination);
+        s1.start(now, Math.random() * 1.5); s1.stop(now + 0.3);
+        // rumble, delayed like the sound of distant thunder
+        var delay = 0.12 + Math.random() * 0.4, dur = 1.8 + Math.random() * 1.2;
+        var s2 = ac.createBufferSource(); s2.buffer = buf;
+        var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 170; lp.Q.value = 0.8;
+        var g2 = ac.createGain();
+        g2.gain.setValueAtTime(0.0001, now + delay);
+        g2.gain.linearRampToValueAtTime(1.6, now + delay + 0.12);
+        g2.gain.exponentialRampToValueAtTime(0.6, now + delay + dur * 0.35);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + delay + dur);
+        s2.connect(lp); lp.connect(g2); g2.connect(ac.destination);
+        s2.start(now + delay, Math.random() * 1.5); s2.stop(now + delay + dur + 0.1);
+    } catch (e) { /* audio not available: the flash still works */ }
+}
+
 function playShutterSound() { beep(1200, 0.12, 0.2); }
 function playBeepSound() { beep(800, 0.06, 0.12); }
 
