@@ -1215,11 +1215,15 @@ async function capturePhoto() {
 
 function applyPropsToImage(canvas, ctx) {
     var width = canvas.width; var height = canvas.height;
+    
     if (selectedProps.background && selectedProps.background !== 'none') {
         ctx.fillStyle = backgroundColors[selectedProps.background] || '#000000';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(cameraView, 0, 0, width, height);
+    } else {
+        ctx.drawImage(cameraView, 0, 0, width, height);
     }
+    
     if (selectedProps.filter && selectedProps.filter !== 'none') applyFilter(ctx, width, height, selectedProps.filter);
     if (selectedProps.hat && selectedProps.hat !== 'none') applyHat(ctx, width, height, selectedProps.hat);
     if (selectedProps.glasses && selectedProps.glasses !== 'none') applyGlasses(ctx, width, height, selectedProps.glasses);
