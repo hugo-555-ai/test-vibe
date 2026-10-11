@@ -832,7 +832,7 @@ function showRandomEmoji() {
     if (!emojiContainer) {
         emojiContainer = document.createElement('div');
         emojiContainer.id = 'emojiContainer';
-        emojiContainer.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 15; pointer-events: none; font-size: 250px; text-align: center;';
+        emojiContainer.style.cssText = 'position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 15; pointer-events: none; font-size: 100px; text-align: center;';
         document.querySelector('.camera-container').appendChild(emojiContainer);
     }
     var randomEmoji = funEmojis[Math.floor(Math.random() * funEmojis.length)];
