@@ -978,11 +978,14 @@ function updateStatus(message) { document.getElementById('statusText').textConte
 function downloadPhotoStrip() {
     if (photos.length === 0) return;
     var stripCanvas = document.createElement('canvas'); var stripCtx = stripCanvas.getContext('2d');
-    var photoWidth = 200, photoHeight = 150, margin = 10;
-    var stripWidth = photoWidth; var stripHeight = photoHeight * photos.length + margin * (photos.length + 1);
+    var photoWidth = 200, photoHeight = 150;
+    var photoMargin = Math.round(photoWidth * 0.05); // 5% margin
+    var betweenMargin = Math.round(photoMargin * 0.5); // Half margin between photos
+    var stripWidth = photoWidth + photoMargin * 2;
+    var stripHeight = (photoHeight + photoMargin * 2) * photos.length + betweenMargin * (photos.length - 1);
     stripCanvas.width = stripWidth; stripCanvas.height = stripHeight;
     stripCtx.fillStyle = '#1a1a2e'; stripCtx.fillRect(0, 0, stripWidth, stripHeight);
-    stripCtx.strokeStyle = '#4ecdc4'; stripCtx.lineWidth = 3; stripCtx.strokeRect(5, 5, stripWidth - 10, stripHeight - 10);
+    stripCtx.strokeStyle = '#4ecdc4'; stripCtx.lineWidth = 3; stripCtx.strokeRect(photoMargin, photoMargin, stripWidth - photoMargin * 2, stripHeight - photoMargin * 2);
     stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 18px Comic Neue, cursive'; stripCtx.textAlign = 'center';
     stripCtx.fillText('Fotomat\u00f3n', stripWidth / 2, 30);
     stripCtx.fillStyle = '#ff6b6b'; stripCtx.font = '14px Comic Neue, cursive';
@@ -991,12 +994,12 @@ function downloadPhotoStrip() {
     photos.forEach(function(photoUrl, index) {
         var img = new Image();
         img.onload = function() {
-            var y = margin + index * (photoHeight + margin);
+            var y = photoMargin + index * (photoHeight + photoMargin * 2 + betweenMargin);
             stripCtx.strokeStyle = '#ff6b6b'; stripCtx.lineWidth = 2;
-            stripCtx.strokeRect(5, y - 5, photoWidth - 10, photoHeight + 10);
-            stripCtx.drawImage(img, 5, y, photoWidth - 10, photoHeight);
+            stripCtx.strokeRect(photoMargin, y, photoWidth, photoHeight);
+            stripCtx.drawImage(img, photoMargin, y, photoWidth, photoHeight);
             stripCtx.fillStyle = '#ffe66d'; stripCtx.font = 'bold 16px Comic Neue, cursive';
-            stripCtx.fillText((index + 1), photoWidth / 2, y + photoHeight + 25);
+            stripCtx.fillText((index + 1), photoMargin + photoWidth / 2, y + photoHeight + 20);
             photosLoaded++;
             if (photosLoaded === photos.length) {
                 var link = document.createElement('a');
