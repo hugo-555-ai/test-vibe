@@ -820,7 +820,7 @@ var currentPhotoIndex = 0;
 var isSessionRunning = false;
 var sessionTimers = [];
 var currentPropTab = 'filter';
-var selectedProps = { filter: 'none', distort: 'none', background: 'none' };   // single-choice categories
+var selectedProps = { filter: 'none', distort: 'none', finish: 'none', background: 'none' };   // single-choice categories
 var placed = [];          // hats & glasses worn: { uid, kind, id, dx, dy, scale } (dx/dy in face-widths)
 var nextUid = 1;
 var selectedUid = null;   // accessory targeted by drag / wheel / slider
@@ -867,6 +867,18 @@ var propCategories = [
         { id: 'ripple', name: 'Agua', emoji: '💧' },
         { id: 'melt', name: 'Derretido', emoji: '🍦' },
         { id: 'rgbsplit', name: 'RGB', emoji: '📺' }
+    ]},
+    { key: 'finish', label: 'Acabado', icon: '🖌️', items: [
+        { id: 'none', name: 'Ninguno', emoji: '🚫' },
+        { id: 'comic', name: 'Cómic', emoji: '💥' },
+        { id: 'neon', name: 'Neón', emoji: '💡' },
+        { id: 'photocopy', name: 'Fotocopia', emoji: '📠' },
+        { id: 'solarize', name: 'Solarizar', emoji: '🌗' },
+        { id: 'thermal', name: 'Térmica', emoji: '🌡️' },
+        { id: 'duoneon', name: 'Dúo neón', emoji: '💜' },
+        { id: 'gold', name: 'Dorado', emoji: '🏆' },
+        { id: 'planet', name: 'Planeta', emoji: '🌍' },
+        { id: 'halftone', name: 'Medios tonos', emoji: '🔴' }
     ]},
     { key: 'hat', label: 'Sombreros', icon: '🎩', items: [
         { id: 'none', name: 'Ninguno', emoji: '🚫' },
@@ -1538,6 +1550,182 @@ var FILTERS = {
     warhol: { warhol: true }     // pop-art 2x2 grid, see applyWarhol()
 };
 
+// ===== Acabado: GIMP-style looks (comic, neon edges, photocopy, solarize, colour maps, little planet, halftone) =====
+function makeLUT(stops) {                       // stops: [[0..1, [r, g, b]], ...] -> 256 RGB triplets
+    var lut = new Uint8Array(256 * 3);
+    for (var i = 0; i < 256; i++) {
+        var t = i / 255, a = stops[0], b = stops[stops.length - 1];
+        for (var k = 0; k < stops.length - 1; k++) {
+            if (t >= stops[k][0] && t <= stops[k + 1][0]) { a = stops[k]; b = stops[k + 1]; break; }
+        }
+        var f = b[0] === a[0] ? 0 : (t - a[0]) / (b[0] - a[0]);
+        for (var c = 0; c < 3; c++) lut[i * 3 + c] = Math.round(a[1][c] + (b[1][c] - a[1][c]) * f);
+    }
+    return lut;
+}
+
+var FINISH_LUTS = {
+    thermal: makeLUT([[0, [0, 0, 20]], [0.2, [40, 0, 140]], [0.4, [190, 20, 120]], [0.6, [255, 90, 0]], [0.8, [255, 200, 20]], [1, [255, 255, 230]]]),
+    duoneon: makeLUT([[0, [10, 2, 40]], [0.5, [255, 46, 154]], [1, [45, 226, 255]]]),
+    gold: makeLUT([[0, [26, 15, 0]], [0.55, [184, 134, 11]], [1, [255, 242, 176]]])
+};
+
+var finishCanvas = document.createElement('canvas');
+var finishCtx = finishCanvas.getContext('2d', { willReadFrequently: true });
+
+function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
+function applyFinish(id, w, h, t) {
+    if (id === 'halftone') { applyHalftone(w, h); return; }
+    var k = renderHQ ? 1 : (id === 'planet' ? 0.35 : (id === 'comic' || id === 'neon' ? 0.4 : 0.5));   // the preview works at reduced resolution
+    var sw = Math.max(4, Math.round(w * k)), sh = Math.max(4, Math.round(h * k));
+    if (finishCanvas.width !== sw || finishCanvas.height !== sh) { finishCanvas.width = sw; finishCanvas.height = sh; }
+    finishCtx.drawImage(vidCanvas, 0, 0, w, h, 0, 0, sw, sh);
+    var img = finishCtx.getImageData(0, 0, sw, sh), s = img.data, n = sw * sh, i, p, x, y;
+    var lum = new Float32Array(n);
+    for (i = 0, p = 0; i < n; i++, p += 4) lum[i] = 0.299 * s[p] + 0.587 * s[p + 1] + 0.114 * s[p + 2];
+
+    // Sobel gradient at an interior pixel -> GX, GY (0 on the border)
+    var GX = 0, GY = 0;
+    function sobel(xx, yy) {
+        if (xx < 1 || yy < 1 || xx >= sw - 1 || yy >= sh - 1) { GX = 0; GY = 0; return; }
+        var o = yy * sw + xx;
+        var a = lum[o - sw - 1], b = lum[o - sw], c = lum[o - sw + 1];
+        var d = lum[o - 1], f = lum[o + 1];
+        var g = lum[o + sw - 1], hh = lum[o + sw], j = lum[o + sw + 1];
+        GX = (c + 2 * f + j) - (a + 2 * d + g);
+        GY = (g + 2 * hh + j) - (a + 2 * b + c);
+    }
+
+    switch (id) {
+        case 'solarize':
+            for (i = 0, p = 0; i < n; i++, p += 4) {
+                for (var c1 = 0; c1 < 3; c1++) { var v = s[p + c1]; s[p + c1] = clamp255((v > 110 ? 255 - v : v) * 1.5); }
+            }
+            break;
+        case 'photocopy': {
+            var mean = 0;
+            for (i = 0; i < n; i++) mean += lum[i];
+            var thr = (mean / n) * 0.95;                         // adapts to the room's exposure
+            for (i = 0, p = 0; i < n; i++, p += 4) {
+                var a1 = clamp255((lum[i] - thr) * 10 + 128) / 255;      // narrow soft step = antialiased threshold
+                s[p] = 22 + a1 * 228; s[p + 1] = 22 + a1 * 226; s[p + 2] = 24 + a1 * 216;   // ink on warm paper
+            }
+            break;
+        }
+        case 'thermal': case 'duoneon': case 'gold': {
+            var lut = FINISH_LUTS[id];
+            for (i = 0, p = 0; i < n; i++, p += 4) {
+                var li = lum[i] < 0 ? 0 : (lum[i] > 255 ? 255 : (lum[i] | 0)) * 3;
+                s[p] = lut[li]; s[p + 1] = lut[li + 1]; s[p + 2] = lut[li + 2];
+            }
+            break;
+        }
+        case 'comic': {
+            var out = finishCtx.createImageData(sw, sh), d = out.data;
+            for (y = 0; y < sh; y++) {
+                for (x = 0; x < sw; x++) {
+                    i = y * sw + x; p = i * 4;
+                    sobel(x, y);
+                    if (Math.sqrt(GX * GX + GY * GY) > 130) { d[p] = d[p + 1] = d[p + 2] = 10; d[p + 3] = 255; continue; }
+                    for (var c2 = 0; c2 < 3; c2++) {              // contrast, then four flat tones per channel
+                        var q = clamp255((s[p + c2] - 128) * 1.3 + 128);
+                        d[p + c2] = Math.round(q / 85) * 85 > 255 ? 255 : Math.round(q / 85) * 85;
+                    }
+                    d[p + 3] = 255;
+                }
+            }
+            finishCtx.putImageData(out, 0, 0);
+            vidCtx.save(); vidCtx.setTransform(1, 0, 0, 1, 0, 0);
+            vidCtx.imageSmoothingEnabled = true;
+            vidCtx.drawImage(finishCanvas, 0, 0, sw, sh, 0, 0, w, h);
+            vidCtx.restore();
+            return;
+        }
+        case 'neon': {
+            var out2 = finishCtx.createImageData(sw, sh), d2 = out2.data;
+            for (y = 0; y < sh; y++) {
+                for (x = 0; x < sw; x++) {
+                    i = y * sw + x; p = i * 4;
+                    sobel(x, y);
+                    var m = Math.min(255, Math.sqrt(GX * GX + GY * GY) * 0.9);
+                    var warm = GX > 0 ? 1 : 0.25;                // light from one side is pink, from the other cyan
+                    d2[p] = clamp255(m * (0.35 + 0.65 * warm) + s[p] * 0.1);
+                    d2[p + 1] = clamp255(m * 0.55 + s[p + 1] * 0.1);
+                    d2[p + 2] = clamp255(m * (1.0 - 0.6 * warm + 0.4) + s[p + 2] * 0.1);
+                    d2[p + 3] = 255;
+                }
+            }
+            finishCtx.putImageData(out2, 0, 0);
+            vidCtx.save(); vidCtx.setTransform(1, 0, 0, 1, 0, 0);
+            vidCtx.imageSmoothingEnabled = true;
+            vidCtx.drawImage(finishCanvas, 0, 0, sw, sh, 0, 0, w, h);
+            vidCtx.restore();
+            return;
+        }
+        case 'planet': {
+            var out3 = finishCtx.createImageData(sw, sh), d3 = out3.data;
+            var cx = sw / 2, cy = sh / 2, rmax = Math.hypot(sw, sh) / 2, rot = t * 0.00004;
+            var TAU = Math.PI * 2;
+            for (y = 0; y < sh; y++) {
+                for (x = 0; x < sw; x++) {
+                    var dx = x - cx, dy = y - cy, r = Math.sqrt(dx * dx + dy * dy);
+                    var a = Math.atan2(dy, dx) / TAU + 0.5 + rot;
+                    a -= Math.floor(a);
+                    var u = a * sw, vv = (1 - r / rmax) * (sh - 1.001);   // ground (image bottom) in the middle, sky outside
+                    if (vv < 0) vv = 0;
+                    var x0 = u | 0, x1 = (x0 + 1) % sw, y0 = vv | 0, fx = u - x0, fy = vv - y0;
+                    var i00 = (y0 * sw + x0) * 4, i10 = (y0 * sw + x1) * 4, i01 = ((y0 + 1) * sw + x0) * 4, i11 = ((y0 + 1) * sw + x1) * 4;
+                    var w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+                    var o = (y * sw + x) * 4;
+                    d3[o] = s[i00] * w00 + s[i10] * w10 + s[i01] * w01 + s[i11] * w11;
+                    d3[o + 1] = s[i00 + 1] * w00 + s[i10 + 1] * w10 + s[i01 + 1] * w01 + s[i11 + 1] * w11;
+                    d3[o + 2] = s[i00 + 2] * w00 + s[i10 + 2] * w10 + s[i01 + 2] * w01 + s[i11 + 2] * w11;
+                    d3[o + 3] = 255;
+                }
+            }
+            finishCtx.putImageData(out3, 0, 0);
+            vidCtx.save(); vidCtx.setTransform(1, 0, 0, 1, 0, 0);
+            vidCtx.imageSmoothingEnabled = true;
+            vidCtx.drawImage(finishCanvas, 0, 0, sw, sh, 0, 0, w, h);
+            vidCtx.restore();
+            return;
+        }
+    }
+    finishCtx.putImageData(img, 0, 0);                            // modes that edited the pixels in place
+    vidCtx.save(); vidCtx.setTransform(1, 0, 0, 1, 0, 0);
+    vidCtx.imageSmoothingEnabled = true;
+    vidCtx.drawImage(finishCanvas, 0, 0, sw, sh, 0, 0, w, h);
+    vidCtx.restore();
+}
+
+// Pop-art halftone: one colour dot per cell, bigger where the picture is darker, on newsprint-coloured paper.
+function applyHalftone(w, h) {
+    var cell = Math.max(8, Math.round(w / 90));
+    var cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
+    if (finishCanvas.width !== cols || finishCanvas.height !== rows) { finishCanvas.width = cols; finishCanvas.height = rows; }
+    finishCtx.drawImage(vidCanvas, 0, 0, w, h, 0, 0, cols, rows);
+    var d = finishCtx.getImageData(0, 0, cols, rows).data;
+    vidCtx.save();
+    vidCtx.setTransform(1, 0, 0, 1, 0, 0);
+    vidCtx.globalCompositeOperation = 'source-over';
+    vidCtx.fillStyle = '#f6f1e4';
+    vidCtx.fillRect(0, 0, w, h);
+    for (var y = 0; y < rows; y++) {
+        for (var x = 0; x < cols; x++) {
+            var p = (y * cols + x) * 4, r = d[p], g = d[p + 1], b = d[p + 2];
+            var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            var rad = cell * 0.78 * Math.sqrt(1 - lum * 0.94);
+            if (rad < 0.8) continue;
+            vidCtx.fillStyle = 'rgb(' + clamp255((r - 128) * 1.35 + 128) + ',' + clamp255((g - 128) * 1.35 + 128) + ',' + clamp255((b - 128) * 1.35 + 128) + ')';
+            vidCtx.beginPath();
+            vidCtx.arc((x + 0.5) * cell, (y + 0.5) * cell, rad, 0, Math.PI * 2);
+            vidCtx.fill();
+        }
+    }
+    vidCtx.restore();
+}
+
 var distCanvas = document.createElement('canvas');
 var distCtx = distCanvas.getContext('2d', { willReadFrequently: true });
 
@@ -1694,6 +1882,7 @@ function drawVideoLayer(w, h, t) {
         vidCtx.fillStyle = vg;
         vidCtx.fillRect(0, 0, w, h);
     }
+    if (ready && selectedProps.finish !== 'none') applyFinish(selectedProps.finish, w, h, t);
     if (ready && selectedProps.distort !== 'none') applyDistortion(selectedProps.distort, w, h, t);
 }
 
