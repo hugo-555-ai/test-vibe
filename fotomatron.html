@@ -824,6 +824,25 @@ function triggerConfetti() {
     }, 3000);
 }
 
+// ===== Fun Emoji Display =====
+const funEmojis = ['\ud83d\ude00', '\ud83d\ude02', '\ud83d\ude06', '\ud83d\ude0a', '\ud83d\ude0d', '\ud83d\ude18', '\ud83d\ude1a', '\ud83d\ude1c', '\ud83d\ude03', '\ud83d\ude2d', '\ud83d\ude01', '\ud83d\ude05', '\ud83d\ude0b', '\ud83d\ude0e', '\ud83d\ude10', '\ud83d\ude12', '\ud83d\udc4c', '\ud83d\udc4f', '\u270c', '\ud83d\udc8b'];
+
+function showRandomEmoji() {
+    var emojiContainer = document.getElementById('emojiContainer');
+    if (!emojiContainer) {
+        emojiContainer = document.createElement('div');
+        emojiContainer.id = 'emojiContainer';
+        emojiContainer.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 15; pointer-events: none; font-size: 250px; text-align: center;';
+        document.querySelector('.camera-container').appendChild(emojiContainer);
+    }
+    var randomEmoji = funEmojis[Math.floor(Math.random() * funEmojis.length)];
+    emojiContainer.textContent = randomEmoji;
+    emojiContainer.style.display = 'block';
+    setTimeout(function() {
+        emojiContainer.style.display = 'none';
+    }, TIME_BETWEEN_PHOTOS * 1000);
+}
+
 // ===== Modal Functions =====
 function showErrorModal(message) {
     var modal = document.getElementById('errorModal');
@@ -1219,6 +1238,7 @@ function takePhoto() {
         currentPhotoIndex++;
         if (currentPhotoIndex >= PHOTO_COUNT) { endPhotoSession(); return; }
         updateNextPhotoCountdown();
+        showRandomEmoji();
         betweenPhotosTimeout = setTimeout(function() { 
             playBeepSound(); 
             takePhoto(); 
